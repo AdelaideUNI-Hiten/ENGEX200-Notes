@@ -1,0 +1,1660 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Timers — ENGE X200 Interactive Notes</title>
+<style>
+/* ============================================================
+   DESIGN TOKENS
+   ============================================================ */
+:root{
+  --bg:        #0A0E14;
+  --panel:     #10161F;
+  --panel-2:   #151D29;
+  --raised:    #1B2432;
+  --border:    #263140;
+  --border-lo: #1B2330;
+  --text:      #E9EEF5;
+  --text-dim:  #93A2B8;
+  --text-mute: #5D6B80;
+  --amber:     #FFB300;
+  --amber-dim: #7A5A10;
+  --amber-glow: rgba(255,179,0,.35);
+  --teal:      #4FD8CE;
+  --teal-dim:  #123B38;
+  --green:     #46D18A;
+  --red:       #FF6B6B;
+  --display: 'Century Gothic','Avenir Next','Segoe UI',sans-serif;
+  --sans:    'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;
+  --mono:    'SFMono-Regular',Consolas,'Roboto Mono','Liberation Mono',Menlo,monospace;
+  --radius:  10px;
+  --maxw:    760px;
+}
+
+*,*::before,*::after{ box-sizing:border-box; }
+html{ scroll-behavior:smooth; }
+body{
+  margin:0;
+  background:var(--bg);
+  color:var(--text);
+  font-family:var(--sans);
+  font-size:16px;
+  line-height:1.65;
+  -webkit-font-smoothing:antialiased;
+}
+@media (prefers-reduced-motion: reduce){
+  html{ scroll-behavior:auto; }
+  *{ animation-duration:0.001ms !important; animation-iteration-count:1 !important; transition-duration:0.001ms !important; }
+}
+
+h1,h2,h3,h4{
+  font-family:var(--display);
+  font-weight:700;
+  color:#fff;
+  line-height:1.15;
+  margin:0 0 .5em 0;
+}
+p{ margin:0 0 1em 0; }
+a{ color:var(--amber); }
+code, .mono{ font-family:var(--mono); }
+::selection{ background:var(--amber-glow); color:#fff; }
+
+/* scrollbar */
+::-webkit-scrollbar{ width:10px; height:10px; }
+::-webkit-scrollbar-track{ background:var(--bg); }
+::-webkit-scrollbar-thumb{ background:#28303e; border-radius:6px; }
+
+/* ============================================================
+   LAYOUT
+   ============================================================ */
+.layout{
+  display:grid;
+  grid-template-columns: 272px 1fr;
+  min-height:100vh;
+}
+.sidebar{
+  position:sticky; top:0; height:100vh; overflow-y:auto;
+  background:var(--panel);
+  border-right:1px solid var(--border-lo);
+  padding:22px 18px 40px;
+}
+.brand{
+  display:flex; align-items:center; gap:10px;
+  padding-bottom:16px; margin-bottom:14px;
+  border-bottom:1px solid var(--border-lo);
+}
+.brand__chip{
+  width:34px; height:34px; border-radius:7px;
+  background:linear-gradient(155deg,#1c2431,#0d121a);
+  border:1px solid var(--border);
+  display:flex; align-items:center; justify-content:center;
+  font-family:var(--mono); font-size:11px; color:var(--amber);
+  font-weight:700;
+}
+.brand__text{ font-size:13px; line-height:1.3; color:var(--text-dim); }
+.brand__text b{ color:#fff; display:block; font-size:14px; font-family:var(--display); }
+
+.navpart{ margin:20px 0 4px; }
+.navpart__num{
+  font-family:var(--mono); font-size:11px; color:var(--text-mute);
+  letter-spacing:.06em;
+}
+.navpart__title{
+  font-size:12.5px; color:var(--text-dim); margin-top:2px; font-weight:600;
+}
+.navlist{ list-style:none; margin:8px 0 0; padding:0; }
+.navlist li{ margin:1px 0; }
+.navlink{
+  display:block; padding:6px 10px; border-radius:7px;
+  color:var(--text-dim); text-decoration:none; font-size:13.5px;
+  border-left:2px solid transparent;
+  transition:background .15s ease, color .15s ease;
+}
+.navlink:hover{ background:var(--panel-2); color:#fff; }
+.navlink.active{
+  color:var(--amber); background:rgba(255,179,0,.08);
+  border-left:2px solid var(--amber);
+}
+
+.sidebar-toggle{
+  display:none;
+  position:fixed; top:14px; left:14px; z-index:50;
+  width:42px; height:42px; border-radius:9px;
+  background:var(--panel-2); border:1px solid var(--border);
+  color:var(--text); align-items:center; justify-content:center;
+  cursor:pointer;
+}
+.sidebar-toggle svg{ width:18px; height:18px; }
+
+main{ min-width:0; }
+.main-inner{
+  max-width:var(--maxw);
+  margin:0 auto;
+  padding:64px 28px 120px;
+}
+.wide{ max-width:920px; }
+
+.section{ scroll-margin-top:24px; padding-top:56px; }
+.section:first-of-type{ padding-top:0; }
+.eyebrow{
+  font-family:var(--mono); font-size:12px; color:var(--amber);
+  letter-spacing:.08em; margin-bottom:10px; display:flex; align-items:center; gap:8px;
+}
+.eyebrow::before{
+  content:''; width:18px; height:1px; background:var(--amber-dim);
+}
+.section h2{ font-size:clamp(26px,3.4vw,34px); max-width:18ch; }
+.lede{ font-size:18px; color:var(--text-dim); max-width:56ch; }
+
+/* ============================================================
+   HERO
+   ============================================================ */
+.hero{ padding-top:8px; }
+.hero__kicker{
+  font-family:var(--mono); font-size:12.5px; color:var(--text-mute);
+  letter-spacing:.1em; margin-bottom:18px;
+}
+.hero h1{ font-size:clamp(40px,7vw,66px); letter-spacing:-.02em; margin-bottom:14px;}
+.hero h1 span{ color:var(--amber); }
+.hero__sub{ font-size:19px; color:var(--text-dim); max-width:54ch; margin-bottom:30px; }
+.hero__meta{
+  display:flex; gap:22px; flex-wrap:wrap; font-size:13px; color:var(--text-mute);
+  font-family:var(--mono); margin-bottom:34px;
+}
+.hero__meta b{ color:var(--text); }
+
+/* ============================================================
+   GENERIC COMPONENTS
+   ============================================================ */
+.card{
+  background:var(--panel-2);
+  border:1px solid var(--border);
+  border-radius:var(--radius);
+  padding:20px 22px;
+}
+.callout{
+  border-left:3px solid var(--amber);
+  background:linear-gradient(90deg, rgba(255,179,0,.09), transparent 60%);
+  padding:14px 18px; border-radius:0 8px 8px 0; margin:20px 0;
+  font-size:15px;
+}
+.callout.teal{ border-left-color:var(--teal); background:linear-gradient(90deg, rgba(79,216,206,.10), transparent 60%); }
+.callout.red{ border-left-color:var(--red); background:linear-gradient(90deg, rgba(255,107,107,.10), transparent 60%); }
+.callout b{ color:#fff; }
+.callout__label{
+  font-family:var(--mono); font-size:11px; text-transform:uppercase;
+  letter-spacing:.08em; color:var(--amber); display:block; margin-bottom:5px;
+}
+.callout.teal .callout__label{ color:var(--teal); }
+.callout.red .callout__label{ color:var(--red); }
+
+.grid2{ display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+.grid3{ display:grid; grid-template-columns:repeat(3,1fr); gap:14px; }
+@media (max-width:760px){ .grid2, .grid3{ grid-template-columns:1fr; } }
+
+.taglist{ display:flex; flex-wrap:wrap; gap:8px; margin:12px 0; padding:0; list-style:none; }
+.tag{
+  font-family:var(--mono); font-size:12px; padding:4px 10px; border-radius:20px;
+  background:var(--panel-2); border:1px solid var(--border); color:var(--text-dim);
+}
+
+table{ width:100%; border-collapse:collapse; font-size:14.5px; margin:16px 0; }
+th,td{ text-align:left; padding:9px 12px; border-bottom:1px solid var(--border-lo); }
+th{ font-family:var(--mono); font-size:12px; color:var(--text-mute); font-weight:600; text-transform:uppercase; letter-spacing:.04em; }
+tr:last-child td{ border-bottom:none; }
+td code{ color:var(--amber); white-space:nowrap; }
+
+/* code blocks */
+pre{
+  background:#0D1219; border:1px solid var(--border);
+  border-radius:9px; padding:16px 18px; overflow-x:auto;
+  font-family:var(--mono); font-size:13.3px; line-height:1.65;
+  margin:16px 0;
+}
+pre code{ color:#D6E0EC; }
+.tok-kw{ color:#C792EA; } .tok-type{ color:#4FD8CE; } .tok-num{ color:#F78C6C; }
+.tok-com{ color:#5D6B80; font-style:italic; } .tok-str{ color:#C3E88D; }
+.tok-fn{ color:#82AAFF; } .tok-amber{ color:var(--amber); }
+
+.codepanel{ border:1px solid var(--border); border-radius:10px; overflow:hidden; margin:18px 0; background:#0D1219; }
+.codepanel__tabs{ display:flex; background:var(--panel-2); border-bottom:1px solid var(--border); overflow-x:auto; }
+.codepanel__tab{
+  font-family:var(--mono); font-size:12.5px; padding:10px 16px; color:var(--text-mute);
+  background:transparent; border:none; cursor:pointer; white-space:nowrap;
+  border-bottom:2px solid transparent;
+}
+.codepanel__tab.active{ color:var(--amber); border-bottom:2px solid var(--amber); background:rgba(255,179,0,.05); }
+.codepanel__panel{ display:none; }
+.codepanel__panel.active{ display:block; }
+.codepanel__panel pre{ margin:0; border:none; border-radius:0; }
+
+/* inline code */
+:not(pre) > code{
+  background:var(--panel-2); border:1px solid var(--border-lo);
+  padding:1px 6px; border-radius:5px; font-size:.88em; color:var(--amber);
+}
+
+/* accordion */
+details.acc{
+  border:1px solid var(--border); border-radius:9px; margin:10px 0;
+  background:var(--panel-2); overflow:hidden;
+}
+details.acc summary{
+  padding:13px 16px; cursor:pointer; font-weight:600; color:#fff;
+  list-style:none; display:flex; align-items:center; justify-content:space-between;
+  font-size:14.5px;
+}
+details.acc summary::-webkit-details-marker{ display:none; }
+details.acc summary::after{
+  content:'+'; font-family:var(--mono); color:var(--amber); font-size:18px; font-weight:400;
+}
+details.acc[open] summary::after{ content:'–'; }
+details.acc .acc__body{ padding:0 16px 16px; color:var(--text-dim); font-size:14.5px; }
+details.acc .acc__body pre{ font-size:12.6px; }
+
+/* step flow */
+.steps{ counter-reset:stepnum; margin:22px 0; }
+.step{
+  position:relative; padding:4px 0 26px 40px; border-left:1px solid var(--border);
+  margin-left:15px;
+}
+.step:last-child{ border-left:1px solid transparent; padding-bottom:2px; }
+.step::before{
+  counter-increment:stepnum; content:counter(stepnum);
+  position:absolute; left:-15px; top:0; width:30px; height:30px; border-radius:50%;
+  background:var(--panel-2); border:1px solid var(--amber-dim); color:var(--amber);
+  font-family:var(--mono); font-size:13px; display:flex; align-items:center; justify-content:center;
+}
+.step h4{ font-size:15.5px; margin-bottom:4px; }
+.step p{ font-size:14.5px; color:var(--text-dim); margin-bottom:8px; }
+
+/* register bit fields */
+.regfield{
+  display:flex; border:1px solid var(--border); border-radius:7px; overflow:hidden;
+  font-family:var(--mono); font-size:11.5px; margin:12px 0;
+}
+.regfield__bit{
+  flex:1; text-align:center; padding:8px 2px; border-right:1px solid var(--border-lo);
+  color:var(--text-mute); background:var(--panel-2);
+}
+.regfield__bit:last-child{ border-right:none; }
+.regfield__bit.on{ color:var(--amber); background:rgba(255,179,0,.09); font-weight:700; }
+
+/* glossary */
+.glossary dt{ font-family:var(--mono); color:var(--amber); font-size:14px; margin-top:14px; }
+.glossary dd{ margin:4px 0 0; color:var(--text-dim); font-size:14.5px; }
+
+/* buttons */
+.btn{
+  font-family:var(--sans); font-weight:600; font-size:14px;
+  padding:10px 18px; border-radius:8px; border:1px solid var(--border);
+  background:var(--raised); color:var(--text); cursor:pointer;
+  transition:transform .1s ease, border-color .15s ease;
+}
+.btn:hover{ border-color:var(--amber-dim); }
+.btn:active{ transform:scale(.97); }
+.btn.primary{ background:var(--amber); color:#241900; border-color:var(--amber); }
+.btn.primary:hover{ filter:brightness(1.08); }
+.btn.ghost{ background:transparent; }
+.btn:disabled{ opacity:.4; cursor:not-allowed; }
+.btnrow{ display:flex; gap:10px; flex-wrap:wrap; margin:16px 0; }
+
+input[type=number], input[type=range]{
+  font-family:var(--mono); background:var(--raised); border:1px solid var(--border);
+  color:var(--text); border-radius:6px; padding:7px 9px; font-size:14px;
+}
+input[type=number]{ width:100px; }
+label.field{ display:flex; flex-direction:column; gap:5px; font-size:12.5px; color:var(--text-dim); white-space:nowrap; flex-shrink:0; }
+.fieldrow{ display:flex; gap:18px; flex-wrap:wrap; align-items:flex-end; margin:16px 0; }
+
+/* widget shell */
+.widget{
+  border:1px solid var(--border); background:var(--panel-2); border-radius:12px;
+  padding:22px; margin:22px 0;
+}
+.widget__title{
+  font-family:var(--mono); font-size:12px; color:var(--text-mute);
+  text-transform:uppercase; letter-spacing:.06em; margin-bottom:14px;
+  display:flex; align-items:center; gap:8px;
+}
+.widget__title .dot{ width:7px; height:7px; border-radius:50%; background:var(--green); }
+
+/* LED */
+.led{
+  width:16px; height:16px; border-radius:50%;
+  background:#3a1010; border:1px solid #5c1a1a;
+  box-shadow:inset 0 0 4px rgba(0,0,0,.5);
+  display:inline-block; transition:all .1s ease;
+}
+.led.on{
+  background:#ff4d4d; border-color:#ff8080;
+  box-shadow:0 0 14px 4px rgba(255,80,80,.65), inset 0 0 6px rgba(255,255,255,.4);
+}
+.led.amber-led{ background:#3a2c10; border-color:#5c4a1a; }
+.led.amber-led.on{ background:var(--amber); border-color:#ffd166; box-shadow:0 0 14px 4px var(--amber-glow), inset 0 0 6px rgba(255,255,255,.5); }
+
+/* digital readout */
+.readout{
+  font-family:var(--mono); background:#05070A; border:1px solid var(--border);
+  border-radius:8px; padding:14px 18px; color:var(--amber);
+  font-size:28px; letter-spacing:.04em; text-shadow:0 0 10px var(--amber-glow);
+  display:inline-block; min-width:140px; text-align:center;
+}
+.progress{
+  width:100%; height:10px; background:#05070A; border:1px solid var(--border);
+  border-radius:6px; overflow:hidden; margin-top:10px;
+}
+.progress__fill{
+  height:100%; background:linear-gradient(90deg, var(--amber-dim), var(--amber));
+  width:0%; transition:width .05s linear;
+}
+.flash{ animation:flashkey .4s ease; }
+@keyframes flashkey{ 0%{ box-shadow:0 0 0 0 var(--amber-glow);} 40%{ box-shadow:0 0 0 8px var(--amber-glow);} 100%{ box-shadow:0 0 0 0 transparent;} }
+
+.statrow{ display:flex; gap:26px; flex-wrap:wrap; margin-top:14px; }
+.stat{ font-size:13px; color:var(--text-mute); }
+.stat b{ display:block; color:#fff; font-family:var(--mono); font-size:17px; }
+
+/* bounce simulator */
+.bitreg{ display:flex; gap:5px; margin:14px 0; }
+.bitbox{
+  width:34px; height:34px; border-radius:6px; border:1px solid var(--border);
+  display:flex; align-items:center; justify-content:center; font-family:var(--mono);
+  font-size:14px; color:var(--text-mute); background:var(--raised); transition:all .2s ease;
+}
+.bitbox.hi{ color:var(--green); border-color:#1c5c3c; }
+.bitbox.lo{ color:var(--red); border-color:#5c1a1a; background:#1a0d0d; }
+.timeline{ display:flex; gap:5px; margin:14px 0; flex-wrap:wrap; }
+.tick{
+  width:26px; height:40px; border-radius:5px; border:1px solid var(--border);
+  display:flex; align-items:flex-end; justify-content:center; font-size:9px;
+  font-family:var(--mono); color:var(--text-mute); position:relative; background:var(--raised);
+}
+.tick.hi{ background:linear-gradient(0deg, rgba(70,209,138,.35), transparent); border-color:#1c5c3c; }
+.tick.lo{ background:linear-gradient(0deg, rgba(255,107,107,.35), transparent); border-color:#5c1a1a; }
+.tick.current{ outline:2px solid var(--amber); }
+
+/* summary cheat table highlight */
+.cheat-highlight{ background:rgba(255,179,0,.06); }
+
+footer.pagefoot{
+  border-top:1px solid var(--border-lo); margin-top:70px; padding-top:26px;
+  font-size:13px; color:var(--text-mute);
+}
+
+@media (max-width:920px){
+  .layout{ grid-template-columns:1fr; }
+  .sidebar{
+    position:fixed; left:0; top:0; width:78vw; max-width:300px; z-index:40;
+    transform:translateX(-100%); transition:transform .25s ease; box-shadow:20px 0 40px rgba(0,0,0,.4);
+  }
+  body.nav-open .sidebar{ transform:translateX(0); }
+  body.nav-open::after{
+    content:''; position:fixed; inset:0; background:rgba(0,0,0,.5); z-index:35;
+  }
+  .sidebar-toggle{ display:flex; }
+  .main-inner{ padding-top:88px; }
+  .grid2, .grid3{ grid-template-columns:1fr; }
+  .readout{ min-width:96px; font-size:22px !important; padding:10px 12px; }
+  .fieldrow{ gap:12px; }
+}
+</style>
+</head>
+<body>
+
+<button class="sidebar-toggle" id="navToggle" aria-label="Toggle contents menu">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12h18M3 6h18M3 18h18"/></svg>
+</button>
+
+<div class="layout">
+  <!-- ============ SIDEBAR ============ -->
+  <nav class="sidebar" id="sidebar">
+    <div class="brand">
+      <div class="brand__chip">TIM</div>
+      <div class="brand__text"><b>Timers</b>ENGE X200 · Lecture 4</div>
+    </div>
+
+    <div class="navpart">
+      <div class="navpart__num">00 / PREP</div>
+      <div class="navpart__title">Before we start</div>
+    </div>
+    <ul class="navlist">
+      <li><a class="navlink" href="#prep">Refresh the basics</a></li>
+    </ul>
+
+    <div class="navpart">
+      <div class="navpart__num">01 / INTRO</div>
+      <div class="navpart__title">Why timers exist</div>
+    </div>
+    <ul class="navlist">
+      <li><a class="navlink" href="#motivation">The microwave problem</a></li>
+      <li><a class="navlink" href="#hardware-timers">What is a hardware timer?</a></li>
+      <li><a class="navlink" href="#timer-types">Types of timers</a></li>
+      <li><a class="navlink" href="#core-registers">The three core registers</a></li>
+      <li><a class="navlink" href="#timer-maths">Timer maths + calculator</a></li>
+    </ul>
+
+    <div class="navpart">
+      <div class="navpart__num">02 / REGISTERS</div>
+      <div class="navpart__title">Setting a timer up</div>
+    </div>
+    <ul class="navlist">
+      <li><a class="navlink" href="#register-setup">Step-by-step setup</a></li>
+      <li><a class="navlink" href="#timer-events">Events & interrupt flags</a></li>
+      <li><a class="navlink" href="#isr">Writing the ISR</a></li>
+    </ul>
+
+    <div class="navpart">
+      <div class="navpart__num">03 / EXAMPLES</div>
+      <div class="navpart__title">Putting it to work</div>
+    </div>
+    <ul class="navlist">
+      <li><a class="navlink" href="#example-blink">1 · Blinking an LED</a></li>
+      <li><a class="navlink" href="#software-layer">Software-side timing</a></li>
+      <li><a class="navlink" href="#wrappers">Cleaner code: wrappers</a></li>
+      <li><a class="navlink" href="#example-button">2 · Button + Timer + EXTI</a></li>
+      <li><a class="navlink" href="#bounce">The bounce problem</a></li>
+      <li><a class="navlink" href="#debounce">3 · Debouncing with a timer</a></li>
+    </ul>
+
+    <div class="navpart">
+      <div class="navpart__num">04 / WRAP-UP</div>
+      <div class="navpart__title">Recap</div>
+    </div>
+    <ul class="navlist">
+      <li><a class="navlink" href="#summary">Cheat sheet & glossary</a></li>
+    </ul>
+  </nav>
+
+  <!-- ============ MAIN ============ -->
+  <main>
+    <div class="main-inner">
+
+      <!-- HERO -->
+      <section class="hero section" id="top">
+        <div class="hero__kicker">ENGE X200 · MICROCONTROLLER PROGRAMMING · LECTURE 4</div>
+        <h1>Timers<span>.</span></h1>
+        <p class="hero__sub">How a microcontroller keeps perfect time, blinks an LED without freezing the whole chip, and figures out whether you actually pressed a button — all without the CPU watching a clock.</p>
+
+        <div class="widget" style="margin-top:0;">
+          <div class="widget__title"><span class="dot"></span> Live demo — a hardware timer counting, for real, right now</div>
+          <div id="heroCounterMount"></div>
+          <p style="font-size:13px;color:var(--text-mute);margin:12px 0 0;">This little circuit is exactly what's ticking away inside a real STM32 chip while you read this — a register counting up, resetting, and firing an event, thousands of times a second. Slowed way down so you can watch it happen. You'll build the real version yourself in this chapter.</p>
+        </div>
+
+        <div class="hero__meta">
+          <span><b>LO1</b> Understand hardware timers &amp; event counters</span>
+          <span><b>LO2</b> Non‑blocking debounce using interrupts &amp; timers</span>
+        </div>
+      </section>
+
+      <!-- ================= SECTION CONTENT GOES HERE ================= -->
+      <section class="section" id="prep">
+  <div class="eyebrow">00 · PREP</div>
+  <h2>Refresh the basics first</h2>
+  <p class="lede">Timers lean hard on ideas from earlier lectures — registers, bits, pointers, interrupts. If any of these feel shaky, open them up. If you're confident, skip straight to <a href="#motivation">Section 01</a>.</p>
+
+  <details class="acc">
+    <summary>What actually <em>is</em> a register?</summary>
+    <div class="acc__body">
+      <p>A microcontroller chip is packed with tiny circuits called <b>peripherals</b> — GPIO pins, timers, communication ports, and so on. Each peripheral is controlled by a handful of numbered memory slots called <b>registers</b>. A register is just a box that holds a fixed number of bits (usually 32 on these chips), sitting at a specific, fixed memory address.</p>
+      <p>Writing a number into a register changes the peripheral's behaviour instantly — in hardware, not software. Reading a register tells you the peripheral's current state. In C, we don't normally type raw addresses; instead the toolchain gives us named "shortcuts" like <code>TIM16->PSC</code>, which behind the scenes points straight at the correct memory address for that register.</p>
+    </div>
+  </details>
+
+  <details class="acc">
+    <summary>Binary &amp; hex, fast</summary>
+    <div class="acc__body">
+      <p>Registers are just numbers, but we usually think about them <b>bit by bit</b> (each bit is a 0 or 1, and a specific bit often means a specific thing — "counter enabled", "interrupt pending"). Two number systems show up constantly in this chapter:</p>
+      <table>
+        <tr><th>Form</th><th>Example</th><th>Value</th></tr>
+        <tr><td>Binary</td><td><code>0b00010001</code></td><td>bit 0 and bit 4 are set → decimal 17</td></tr>
+        <tr><td>Hex</td><td><code>0x11</code></td><td>same value, decimal 17</td></tr>
+        <tr><td>Decimal</td><td><code>17</code></td><td>same value</td></tr>
+      </table>
+      <p>Hex is popular because each hex digit maps to exactly 4 bits, so <code>0x80</code> (used later for debouncing) is instantly "bit 7 is 1, everything else is 0" — <code>0b10000000</code>.</p>
+    </div>
+  </details>
+
+  <details class="acc">
+    <summary>Bitwise operators cheat sheet</summary>
+    <div class="acc__body">
+      <p>You will see the same handful of patterns in almost every line of register code this chapter. Learn these five and the rest of the syntax stops being scary:</p>
+      <table>
+        <tr><th>Pattern</th><th>Reads as</th><th>Used for</th></tr>
+        <tr><td><code>reg |= (1&lt;&lt;n)</code></td><td>"set bit n to 1, leave everything else alone"</td><td>enabling a clock, enabling an interrupt</td></tr>
+        <tr><td><code>reg &amp;= ~(1&lt;&lt;n)</code></td><td>"clear bit n to 0, leave everything else alone"</td><td>clearing an interrupt flag</td></tr>
+        <tr><td><code>reg ^= (1&lt;&lt;n)</code></td><td>"flip bit n — 0 becomes 1, 1 becomes 0"</td><td>toggling an LED</td></tr>
+        <tr><td><code>reg &amp; (1&lt;&lt;n)</code></td><td>"is bit n currently 1?" (reads without changing)</td><td>checking if a flag fired</td></tr>
+        <tr><td><code>reg = value</code></td><td>"overwrite the whole register with this number"</td><td>setting PSC, ARR to an exact count</td></tr>
+      </table>
+      <p><code>1&lt;&lt;n</code> just means "take the number 1 and shift it left n places", which produces a number that is all zeros except a single 1 sitting at position n. It's the standard way to point at "just this one bit" without typing it out in binary.</p>
+    </div>
+  </details>
+
+  <details class="acc">
+    <summary>Why the arrow, <code>TIM16->PSC</code>?</summary>
+    <div class="acc__body">
+      <p><code>TIM16</code> is a pointer to a C <b>struct</b> that lays out every register belonging to Timer 16, in the exact order they exist in memory (CR1, then DIER, then SR, then CNT, PSC, ARR...). Because <code>TIM16</code> is a pointer, we use <code>-></code> instead of <code>.</code> to reach inside it. So <code>TIM16->PSC = 47;</code> means "go to Timer 16's block of memory, find the PSC slot inside it, and write 47 there." This is exactly the same struct-of-registers pattern you used for <code>GPIOA-></code> in the Memory/Registers/GPIO lecture.</p>
+    </div>
+  </details>
+
+  <details class="acc">
+    <summary>What does <code>volatile</code> mean, and why does it matter here?</summary>
+    <div class="acc__body">
+      <p>Normally, the compiler is allowed to optimise your code aggressively — including deciding "this variable never seems to change from the code I can see, I'll just cache it once." That's a disaster for a variable that a hardware peripheral or an interrupt can change behind the compiler's back (like a timer's counter, or a flag flipped inside an ISR). <code>volatile</code> tells the compiler "don't assume — always re-read this from memory, every single time." You'll see it on hardware registers and on any flag variable that's shared between an interrupt and <code>main()</code>, e.g. <code>volatile uint8_t is_blinking</code> later in this chapter.</p>
+    </div>
+  </details>
+
+  <details class="acc">
+    <summary>Interrupts &amp; the NVIC — quick recap from Lecture 3</summary>
+    <div class="acc__body">
+      <p>An <b>interrupt</b> lets a peripheral pause whatever the CPU is doing and force it to jump to a special function immediately — no need for the CPU to keep asking "has anything happened yet?" (that constant asking is called <b>polling</b>, and it wastes CPU time).</p>
+      <p>The <b>NVIC</b> (Nested Vectored Interrupt Controller) is the traffic controller sitting between all the chip's peripherals and the CPU core. Each peripheral has its own interrupt line; <code>NVIC_EnableIRQ(SomeName_IRQn)</code> tells the NVIC "let this peripheral's interrupts through." When one fires, the CPU jumps to a specific function called the <b>ISR</b> (Interrupt Service Routine) — for Timer 16, that function is always named <code>TIM16_IRQHandler</code>, a fixed name the startup code already knows to jump to.</p>
+      <p>This chapter reuses exactly this pattern for timers, and later combines it with the EXTI (external interrupt) pins you met in Lecture 3.</p>
+    </div>
+  </details>
+</section>
+<section class="section" id="motivation">
+  <div class="eyebrow">01 · WHY TIMERS EXIST</div>
+  <h2>The microwave problem</h2>
+  <p class="lede">Press power, set 10 seconds, hit start. How does the microcontroller inside know exactly when 10 seconds are up — down to the millisecond — while also watching the door sensor in case you open it early?</p>
+
+  <p>The obvious first idea: write a loop that counts. Something like this:</p>
+
+  <pre><code><span class="tok-type">volatile bool</span> cooking = <span class="tok-kw">true</span>;
+<span class="tok-type">uint32_t</span> cook_time_cycles;
+
+<span class="tok-type">void</span> <span class="tok-fn">run_microwave</span>(<span class="tok-type">uint32_t</span> cook_time) {
+  <span class="tok-kw">while</span> (cooking) {
+    <span class="tok-com">// clock runs at 48 MHz → 1 second = 48,000,000 cycles</span>
+    cook_time_cycles = <span class="tok-num">48000000U</span> * cook_time;
+    <span class="tok-fn">delay</span>(cook_time_cycles);
+
+    <span class="tok-kw">if</span> (<span class="tok-fn">door_is_open</span>()) { <span class="tok-fn">stop_cooking</span>(); }
+  }
+}
+
+<span class="tok-kw">static void</span> <span class="tok-fn">delay</span>(<span class="tok-type">volatile uint32_t</span> count) {
+  <span class="tok-kw">while</span> (count > <span class="tok-num">0U</span>) { __NOP(); count--; }
+}</code></pre>
+
+  <p>This is a <b>software delay loop</b>: the CPU just sits there, burning through millions of do-nothing instructions, counting down. It's simple — and it has a serious flaw. Try it below.</p>
+
+  <div class="widget">
+    <div class="widget__title"><span class="dot" style="background:var(--red)"></span> Try it — blocking software delay</div>
+    <p style="font-size:14px;color:var(--text-dim);margin-top:-4px;">Click <b>Start cooking</b>, then <i>immediately</i> try clicking <b>Open door</b> while it's running. Warning: this really will freeze this page for a moment on purpose — that's the point.</p>
+    <div class="btnrow">
+      <button class="btn primary" id="blockStartBtn">▶ Start cooking (software delay)</button>
+      <button class="btn" id="blockDoorBtn">🚪 Open door</button>
+    </div>
+    <div id="blockStatus" class="mono" style="font-size:14px;color:var(--text-dim);min-height:20px;"></div>
+  </div>
+
+  <p>Notice the door button simply didn't respond while the delay loop was spinning — because <i>nothing else can run</i> while the CPU is stuck inside that <code>while</code> loop, including checking the door sensor. Now try the fixed version, which hands the waiting off to a piece of hardware and lets the CPU stay free:</p>
+
+  <div class="widget">
+    <div class="widget__title"><span class="dot"></span> Try it — non-blocking (hardware timer + interrupt)</div>
+    <div class="btnrow">
+      <button class="btn primary" id="nbStartBtn">▶ Start cooking (hardware timer)</button>
+      <button class="btn" id="nbDoorBtn">🚪 Open door</button>
+    </div>
+    <div id="nbStatus" class="mono" style="font-size:14px;color:var(--text-dim);min-height:20px;"></div>
+  </div>
+
+  <div class="callout">
+    <span class="callout__label">The takeaway</span>
+    A software delay loop makes the CPU <b>unavailable</b> for the entire wait — it can't check a door sensor, update a display, or respond to a button. The fix is to hand the waiting job to a piece of dedicated hardware that counts independently, and have it <b>interrupt</b> the CPU only at the exact moment it's needed. That dedicated hardware is a <b>timer</b>.
+  </div>
+</section>
+<section class="section" id="hardware-timers">
+  <div class="eyebrow">01 · WHY TIMERS EXIST</div>
+  <h2>What is a hardware timer?</h2>
+  <p class="lede">A hardware timer is an independent peripheral built into the chip that counts — clock cycles, or pulses arriving from outside — entirely on its own, without the CPU (the Cortex processor core) lifting a finger.</p>
+
+  <p>Think of it exactly like setting an alarm clock before a nap: you set the alarm (configure the timer), you go to sleep or do other work (the CPU carries on running your program), and the alarm clock itself keeps time in the background, waking you up (firing an interrupt) the instant the set time is reached. You never had to keep glancing at a clock yourself.</p>
+
+  <div class="callout teal">
+    <span class="callout__label">Core idea</span>
+    <b>Set an alarm for the CPU → let the CPU do other work → a hardware interrupt notifies it exactly when time is up.</b> This is the opposite of the microwave's software loop, where the CPU itself had to do the counting.
+  </div>
+
+  <p>Once you have a piece of hardware that can count independently, it turns out to be useful for a lot more than just delays:</p>
+
+  <div class="grid2">
+    <div class="card">
+      <b style="color:#fff;">⏱ Precise time bases &amp; delays</b>
+      <p style="margin:6px 0 0;font-size:14.5px;">Generate an event every exact millisecond, second, or any interval you calculate — accurate to a single clock cycle.</p>
+    </div>
+    <div class="card">
+      <b style="color:#fff;">⚡ Triggering hardware interrupts</b>
+      <p style="margin:6px 0 0;font-size:14.5px;">Notify the CPU the instant the counter reaches a target, so it can react without ever having to ask.</p>
+    </div>
+    <div class="card">
+      <b style="color:#fff;">📶 Counting external pulses</b>
+      <p style="margin:6px 0 0;font-size:14.5px;">Count real-world events arriving on a pin — e.g. pulses from a rotary encoder or a speed sensor.</p>
+    </div>
+    <div class="card">
+      <b style="color:#fff;">🌊 Generating PWM signals</b>
+      <p style="margin:6px 0 0;font-size:14.5px;">Produce repeating on/off square-wave signals used to drive motors, dim LEDs, or control servos.</p>
+    </div>
+  </div>
+</section>
+<section class="section" id="timer-types">
+  <div class="eyebrow">01 · WHY TIMERS EXIST</div>
+  <h2>Not all timers are the same</h2>
+  <p class="lede">A real microcontroller usually has several timer peripherals on board, split into three families of increasing capability. Which ones — and how many — you get depends entirely on the specific chip.</p>
+
+  <div class="steps">
+    <div class="step">
+      <h4>Basic Timers</h4>
+      <p>Not connected to any GPIO pins — they can only count. Used for internal jobs like periodic interrupts or a system "tick" (a background heartbeat other code can rely on).</p>
+    </div>
+    <div class="step">
+      <h4>General Purpose Timers</h4>
+      <p>A counter plus one or more <b>Capture/Compare (CapCom)</b> channels wired to actual GPIO pins. This lets them generate output signals (PWM / square waves) or capture input signals (e.g. pulses from an external sensor).</p>
+      <ul style="font-size:14.5px;color:var(--text-dim);margin:0;padding-left:18px;">
+        <li><b>Single-channel</b> — perfect for switch debouncing and simple time bases. This is the type used throughout this chapter (TIM16).</li>
+        <li><b>Multi-channel</b> — generating several PWM signals at once, or reading rotary encoders.</li>
+      </ul>
+    </div>
+    <div class="step">
+      <h4>Advanced Control Timers</h4>
+      <p>A CapCom timer plus specialised safety and switching hardware built for handling real power. Used to drive brushless DC motors (via an H-Bridge), switch-mode power supplies, and inverters.</p>
+    </div>
+  </div>
+
+  <p>Which timers actually exist depends on the chip. This course uses two example STM32 parts:</p>
+
+  <table>
+    <tr><th>Chip</th><th>Basic</th><th>General purpose</th><th>Advanced control</th></tr>
+    <tr><td><code>STM32C031C6</code></td><td>0</td><td>4</td><td>1</td></tr>
+    <tr><td><code>STM32G474RE</code></td><td>2</td><td>7</td><td>3</td></tr>
+  </table>
+
+  <div class="callout">
+    <span class="callout__label">Heads up</span>
+    The Nucleo board and Wokwi emulator used in the practicals are built around the <code>STM32C031C6</code>. Its reference manual (<b>RM0490</b>) lists timers like TIM2 and TIM15 on the wider STM32C0 family, but the specific Wokwi emulator model of this chip doesn't include them — always check what's actually on <i>your</i> exact part before assuming a peripheral exists.
+  </div>
+</section>
+<section class="section" id="core-registers">
+  <div class="eyebrow">01 · WHY TIMERS EXIST</div>
+  <h2>Every timer boils down to three registers</h2>
+  <p class="lede">However complicated a timer peripheral looks in the reference manual, its basic ticking behaviour is controlled by just three registers. Learn these three and the rest of the chapter is mostly plumbing.</p>
+
+  <div class="grid3">
+    <div class="card">
+      <div class="mono" style="color:var(--amber);font-size:15px;margin-bottom:6px;">CNT</div>
+      <b style="color:#fff;font-size:14.5px;">Counter Register</b>
+      <p style="font-size:14px;margin:6px 0 0;">Holds the <i>current</i> count value. An n-bit counter ranges from <code>0</code> to <code>2ⁿ−1</code> — TIM16 is 16-bit, so CNT runs from 0 to 65535 before it would naturally overflow.</p>
+    </div>
+    <div class="card">
+      <div class="mono" style="color:var(--amber);font-size:15px;margin-bottom:6px;">PSC</div>
+      <b style="color:#fff;font-size:14.5px;">Prescaler Register</b>
+      <p style="font-size:14px;margin:6px 0 0;">The chip's internal clock ticks in the tens of millions of times per second — far too fast to count anything human-scale directly. PSC divides that clock speed down to something usable.</p>
+    </div>
+    <div class="card">
+      <div class="mono" style="color:var(--amber);font-size:15px;margin-bottom:6px;">ARR</div>
+      <b style="color:#fff;font-size:14.5px;">Auto-Reload Register</b>
+      <p style="font-size:14px;margin:6px 0 0;">Sets the upper limit for CNT. Once <code>CNT == ARR</code>, an <b>update event</b> fires (which can raise an interrupt flag) and CNT automatically resets to 0.</p>
+    </div>
+  </div>
+
+  <p>Picture it like an odometer that's only allowed to count up to a chosen number before flipping back to zero and ringing a bell each time it does — that bell is the update event you'll hook an interrupt onto in Section 02.</p>
+</section>
+<section class="section wide" id="timer-maths">
+  <div class="eyebrow">01 · WHY TIMERS EXIST</div>
+  <h2>Timer maths</h2>
+  <p class="lede">Four formulas connect the numbers you choose (PSC, ARR) to the real-world timing you actually want. They all fall out of one idea: the clock gets divided twice — once by the prescaler, once by the auto-reload.</p>
+
+  <div class="callout">
+    <span class="callout__label">Zero-indexed registers</span>
+    Both PSC and ARR count from 0, so a register value of <code>0</code> means "divide by 1" / "1 total count", not "divide by 0". That's why every formula below has a <code>+ 1</code>.
+  </div>
+
+  <table>
+    <tr><th>Quantity</th><th>Meaning</th><th>Formula</th></tr>
+    <tr><td>Timer frequency, <i>f<sub>tim</sub></i></td><td>Scaled-down version of the chip's clock</td><td class="mono">f_tim = f_clk / (PSC+1)</td></tr>
+    <tr><td>Tick period, <i>T<sub>tick</sub></i></td><td>Time for CNT to go from k → k+1</td><td class="mono">T_tick = 1/f_tim = (PSC+1)/f_clk</td></tr>
+    <tr><td>Update period, <i>T<sub>update</sub></i></td><td>Time between reset events (CNT: 0→ARR is ARR+1 ticks)</td><td class="mono">T_update = T_tick × (ARR+1)</td></tr>
+    <tr><td>Update frequency, <i>f<sub>update</sub></i></td><td>How often the reset/interrupt event happens</td><td class="mono">f_update = f_clk / ((PSC+1)(ARR+1))</td></tr>
+  </table>
+
+  <div class="widget">
+    <div class="widget__title"><span class="dot"></span> Interactive — pick PSC &amp; ARR, watch the timer run</div>
+
+    <div class="fieldrow">
+      <label class="field">f<sub>clk</sub> — clock frequency (MHz)
+        <input type="number" id="calcFclk" value="48" min="1" max="200" step="1">
+      </label>
+      <label class="field">Prescaler PSC
+        <input type="number" id="calcPsc" value="47" min="0" max="65535" step="1">
+      </label>
+      <label class="field">Auto-reload ARR
+        <input type="number" id="calcArr" value="999" min="0" max="65535" step="1">
+      </label>
+      <button class="btn ghost" id="calcExampleBtn">Load the slide 10 example</button>
+    </div>
+
+    <div class="statrow" id="calcStats">
+      <div class="stat">f<sub>tim</sub><b id="statFtim">—</b></div>
+      <div class="stat">T<sub>tick</sub><b id="statTtick">—</b></div>
+      <div class="stat">T<sub>update</sub><b id="statTupdate">—</b></div>
+      <div class="stat">f<sub>update</sub><b id="statFupdate">—</b></div>
+    </div>
+
+    <div id="calcCounterMount" style="margin-top:18px;"></div>
+    <p style="font-size:12.5px;color:var(--text-mute);margin:10px 0 0;">The animation speed below is scaled for visibility (it always sweeps 0→ARR in a couple of seconds) — the numbers above are the real, calculated timing.</p>
+
+    <div class="btnrow" style="margin-top:16px;">
+      <span style="font-size:12.5px;color:var(--text-mute);align-self:center;">Quick targets (auto-solves PSC/ARR for f_clk = 48 MHz):</span>
+      <button class="btn ghost" data-target="100">100 Hz</button>
+      <button class="btn ghost" data-target="1000">1 kHz</button>
+      <button class="btn ghost" data-target="10000">10 kHz</button>
+    </div>
+  </div>
+
+  <h3 style="margin-top:36px;font-size:21px;">Worked example, step by step</h3>
+  <p class="lede" style="font-size:16px;">Goal: trigger an update-event interrupt at exactly <b>f<sub>update</sub> = 1 kHz</b>, given the chip's clock is <b>f<sub>clk</sub> = 48 MHz</b>.</p>
+
+  <div class="steps">
+    <div class="step">
+      <h4>Write down what you need</h4>
+      <p class="mono" style="font-size:14px;">(PSC+1)(ARR+1) = f_clk / f_update = 48,000,000 / 1,000 = 48,000</p>
+      <p>One equation, two unknowns — so there isn't a single correct answer. We need a sensible rule to split 48,000 into two factors.</p>
+    </div>
+    <div class="step">
+      <h4>Rule of thumb: scale the clock to 1 MHz first</h4>
+      <p class="mono" style="font-size:14px;">PSC+1 = f_clk / f_tim = 48,000,000 / 1,000,000 = 48  →  PSC = 47</p>
+      <p>Choosing f<sub>tim</sub> = 1 MHz means every tick is a clean 1 microsecond — easy to reason about, and it leaves plenty of headroom in ARR (16-bit, so up to 65,536 counts) for a wide range of target frequencies.</p>
+    </div>
+    <div class="step">
+      <h4>Solve for ARR</h4>
+      <p class="mono" style="font-size:14px;">ARR+1 = 48,000 / (PSC+1) = 48,000 / 48 = 1,000  →  ARR = 999</p>
+    </div>
+    <div class="step">
+      <h4>Done</h4>
+      <p>Set <code>PSC = 47</code> and <code>ARR = 999</code>. Try it in the calculator above — click "Load the slide 10 example" to see it land exactly on 1 kHz.</p>
+    </div>
+  </div>
+</section>
+<section class="section" id="register-setup">
+  <div class="eyebrow">02 · TIMER REGISTERS</div>
+  <h2>Setting up a timer, step by step</h2>
+  <p class="lede">Every peripheral on the chip lives somewhere in the chip's <b>memory map</b> — a giant address book that tells the processor exactly where to find each peripheral's registers (RM0490, Table 7, pages 49–51). We'll set up <b>TIM16</b> as our working example; every other timer follows an identical procedure with a different name and address.</p>
+
+  <div class="steps">
+    <div class="step">
+      <h4>Turn the peripheral's clock on</h4>
+      <p>Peripherals don't run for free — to save power, most of the chip's peripherals have their clock switched <i>off</i> by default. Timers sit on the APB bus, so we flip the matching bit in the RCC (Reset and Clock Control) peripheral before touching anything else. Bit 17 of <code>APBENR2</code> specifically enables TIM16 (RM0490, Table 31, p.164).</p>
+      <pre><code>RCC->APBENR2 |= <span class="tok-num">1</span><<<span class="tok-num">17</span>; <span class="tok-com">// Enable clock for TIM16</span></code></pre>
+    </div>
+    <div class="step">
+      <h4>Choose the tick rate — write PSC and ARR</h4>
+      <p>Unlike a lot of registers where you set individual bits, PSC and ARR are registers you simply <b>write a whole number into</b> — the value you write becomes the value used by the counter. Using the worked example above (f<sub>update</sub> = 1 kHz at 48 MHz):</p>
+      <pre><code><span class="tok-com">// Set timer to have update rate of 1 kHz</span>
+TIM16->PSC = <span class="tok-num">47</span>;   <span class="tok-com">// Prescaler → scales clock to 1 MHz</span>
+TIM16->ARR = <span class="tok-num">999</span>;  <span class="tok-com">// Auto-reload → 1000 ticks per update</span></code></pre>
+      <div class="regfield">
+        <div class="regfield__bit">31</div><div class="regfield__bit">…</div><div class="regfield__bit">16</div>
+        <div class="regfield__bit on">15</div><div class="regfield__bit on">…</div><div class="regfield__bit on">0</div>
+      </div>
+      <p style="font-size:12.5px;">TIMx_ARR — bits [15:0] hold the 16-bit reload value (RM0490, Table 95, p.629). PSC has the same 16-bit layout.</p>
+    </div>
+    <div class="step">
+      <h4>Enable the counter itself</h4>
+      <p>So far the timer is configured but not actually running. Bit 0 of the control register <code>CR1</code> is the counter-enable (CEN) bit — flipping it starts CNT counting.</p>
+      <pre><code>TIM16->CR1 |= <span class="tok-num">1</span> << <span class="tok-num">0</span>; <span class="tok-com">// Enable counter</span></code></pre>
+    </div>
+  </div>
+
+  <div class="callout">
+    <span class="callout__label">Order matters (a little)</span>
+    Configure PSC and ARR <i>before</i> enabling the counter (CR1) — otherwise the timer might start counting for a moment with old or default values before your settings take effect.
+  </div>
+</section>
+<section class="section" id="timer-events">
+  <div class="eyebrow">02 · TIMER REGISTERS</div>
+  <h2>Events &amp; interrupt flags</h2>
+  <p class="lede">We've never actually touched the CNT register — so how do we find out when it reaches ARR? Two options.</p>
+
+  <div class="grid2">
+    <div class="card">
+      <b style="color:var(--red);">✗ Polling</b>
+      <pre style="margin-top:10px;"><code><span class="tok-kw">if</span>(TIM16->CNT == TIM16->ARR){
+  <span class="tok-com">// do something</span>
+}</code></pre>
+      <p style="font-size:14px;">Works, but the CPU has to keep asking, over and over, wasting cycles it could spend elsewhere — the exact same wastefulness as the microwave's software delay loop.</p>
+    </div>
+    <div class="card">
+      <b style="color:var(--green);">✓ Interrupts</b>
+      <p style="font-size:14px;margin-top:10px;">Enable the timer's <b>update interrupt</b> so the hardware notifies the CPU automatically the instant CNT reaches ARR. The CPU is free until that exact moment.</p>
+    </div>
+  </div>
+
+  <p>Enabling this is one bit, in the <b>DIER</b> register (DMA/Interrupt Enable Register) — specifically the <b>UIE</b> bit (Update Interrupt Enable), bit 0:</p>
+  <pre><code>TIM16->DIER |= <span class="tok-num">1</span> << <span class="tok-num">0</span>; <span class="tok-com">// UIE — enable the update interrupt</span></code></pre>
+
+  <p>This alone doesn't run any of your code yet — it just tells the timer peripheral "when you reach ARR, please raise your interrupt line." Two more things are needed, covered over the next two sections: telling the <b>NVIC</b> to actually pass that signal through to the CPU, and writing the function that runs when it does.</p>
+</section>
+<section class="section" id="isr">
+  <div class="eyebrow">02 · TIMER REGISTERS</div>
+  <h2>Writing the interrupt handler</h2>
+  <p class="lede">Every peripheral capable of interrupting has its own dedicated ISR function name and its own line into the NVIC (RM0490, Table 56, p.260). For TIM16 that name is fixed: <code>TIM16_IRQHandler</code>.</p>
+
+  <p>Putting the whole chain together — clock on, timing configured, interrupt enabled, NVIC told to listen, counter started:</p>
+
+  <pre><code>RCC->APBENR2 |= <span class="tok-num">1</span><<<span class="tok-num">17</span>;        <span class="tok-com">// 1. Enable clock for TIM16</span>
+TIM16->PSC = <span class="tok-num">47</span>;              <span class="tok-com">// 2. Scale clock to 1 MHz</span>
+TIM16->ARR = <span class="tok-num">999</span>;             <span class="tok-com">// 2. 1000 ticks per update → 1 kHz</span>
+TIM16->DIER |= <span class="tok-num">1</span> << <span class="tok-num">0</span>;         <span class="tok-com">// 3. Enable TIM16's update interrupt (UIE)</span>
+NVIC_EnableIRQ(TIM16_IRQn);   <span class="tok-com">// 4. Let the NVIC pass it through to the CPU</span>
+TIM16->CR1 |= <span class="tok-num">1</span> << <span class="tok-num">0</span>;          <span class="tok-com">// 5. Enable the counter — go!</span>
+
+<span class="tok-type">void</span> <span class="tok-fn">TIM16_IRQHandler</span>(<span class="tok-type">void</span>){
+  <span class="tok-com">// runs automatically, the instant CNT reaches ARR</span>
+}</code></pre>
+
+  <p>Inside the handler, one more register matters: <b>SR</b>, the status register. Bit 0 is the <b>UIF</b> flag (Update Interrupt Flag) — it gets set by hardware the moment the interrupt fires, and it's how your code confirms <i>why</i> it's here (a timer might have several different interrupt sources sharing one handler in more advanced setups).</p>
+
+  <pre><code><span class="tok-type">void</span> <span class="tok-fn">TIM16_IRQHandler</span>(<span class="tok-type">void</span>) {
+  <span class="tok-kw">if</span> (TIM16->SR & (<span class="tok-num">1</span><<<span class="tok-num">0</span>)) {          <span class="tok-com">// Did the update flag actually trigger?</span>
+    TIM16->SR &= ~(<span class="tok-num">1</span><<<span class="tok-num">0</span>);        <span class="tok-com">// Clear it, ready for next time</span>
+    GPIOA->ODR ^= (<span class="tok-num">1</span><<<span class="tok-num">5</span>);         <span class="tok-com">// Do the actual work — toggle LED on PA5</span>
+  }
+}</code></pre>
+
+  <div class="callout red">
+    <span class="callout__label">The #1 timer bug</span>
+    Forgetting to clear the flag (<code>TIM16->SR &= ~(1<<0);</code>) means the CPU thinks the interrupt is <i>still</i> pending the instant it exits the handler, and immediately re-enters it — usually locking your program into that ISR forever. Always clear the flag you just handled.
+  </div>
+</section>
+<section class="section" id="example-blink">
+  <div class="eyebrow">03 · EXAMPLES</div>
+  <h2>Example 1 — Blinking an LED at exactly 1 kHz</h2>
+  <p class="lede">Same LED-blink task from Practical 2, but this time we're not guessing at loop iterations — we're specifying the actual real-world period, using everything from Section 02.</p>
+
+  <p>Every program in this course follows the same overall skeleton:</p>
+
+  <pre><code><span class="tok-kw">#include</span> <span class="tok-str">"stm32c0xx.h"</span>
+
+<span class="tok-type">void</span> <span class="tok-fn">SystemInit</span>(<span class="tok-type">void</span>){
+  <span class="tok-com">// STM32 startup routine — leave empty, startup.s handles this</span>
+}
+<span class="tok-type">void</span> <span class="tok-fn">RegisterInit</span>(<span class="tok-type">void</span>){
+  <span class="tok-com">// All register / interrupt setup goes here</span>
+}
+<span class="tok-type">void</span> <span class="tok-fn">Peripheral_IRQHandler</span>(<span class="tok-type">void</span>){
+  <span class="tok-com">// Runs automatically when that peripheral interrupts</span>
+}
+<span class="tok-type">int</span> <span class="tok-fn">main</span>(<span class="tok-type">void</span>){
+  <span class="tok-fn">RegisterInit</span>();
+  <span class="tok-kw">while</span>(<span class="tok-num">1</span>){ <span class="tok-com">/* do something, or nothing at all */</span> }
+}</code></pre>
+
+  <p>Filled in for the blinking LED (PA5), driven by TIM16 at 1 kHz:</p>
+
+  <div class="codepanel">
+    <div class="codepanel__tabs">
+      <button class="codepanel__tab active" data-tab="b1">RegisterInit()</button>
+      <button class="codepanel__tab" data-tab="b2">TIM16_IRQHandler()</button>
+      <button class="codepanel__tab" data-tab="b3">main()</button>
+    </div>
+    <div class="codepanel__panel active" data-panel="b1">
+<pre><code><span class="tok-type">void</span> <span class="tok-fn">RegisterInit</span>(<span class="tok-type">void</span>){
+  RCC->IOPENR  |= <span class="tok-num">1</span><<<span class="tok-num">0</span>;   <span class="tok-com">// Enable clock for GPIOA</span>
+  RCC->APBENR2 |= <span class="tok-num">1</span><<<span class="tok-num">17</span>;  <span class="tok-com">// Enable clock for TIM16</span>
+
+  <span class="tok-com">// Configure PA5 as an output for the LED</span>
+  GPIOA->MODER &= ~(<span class="tok-num">0b11</span><<<span class="tok-num">10</span>);
+  GPIOA->MODER |=  (<span class="tok-num">0b01</span><<<span class="tok-num">10</span>);
+
+  <span class="tok-com">// Timer: update rate of 1 kHz</span>
+  TIM16->PSC = <span class="tok-num">47</span>;
+  TIM16->ARR = <span class="tok-num">999</span>;
+  TIM16->DIER |= <span class="tok-num">1</span><<<span class="tok-num">0</span>;
+  NVIC_EnableIRQ(TIM16_IRQn);
+  TIM16->CR1 |= <span class="tok-num">1</span><<<span class="tok-num">0</span>;
+}</code></pre>
+    </div>
+    <div class="codepanel__panel" data-panel="b2">
+<pre><code><span class="tok-type">void</span> <span class="tok-fn">TIM16_IRQHandler</span>(<span class="tok-type">void</span>) {
+  <span class="tok-kw">if</span> (TIM16->SR & (<span class="tok-num">1</span><<<span class="tok-num">0</span>)) {
+    TIM16->SR &= ~(<span class="tok-num">1</span><<<span class="tok-num">0</span>);   <span class="tok-com">// Clear flag</span>
+    GPIOA->ODR ^= (<span class="tok-num">1</span><<<span class="tok-num">5</span>);    <span class="tok-com">// Toggle LED on PA5</span>
+  }
+}</code></pre>
+    </div>
+    <div class="codepanel__panel" data-panel="b3">
+<pre><code><span class="tok-type">int</span> <span class="tok-fn">main</span>(<span class="tok-type">void</span>){
+  <span class="tok-fn">RegisterInit</span>();
+  <span class="tok-kw">while</span>(<span class="tok-num">1</span>){
+    <span class="tok-com">// Empty superloop — the interrupt does all the work.</span>
+    <span class="tok-com">// We still need it, or the program would just end.</span>
+  }
+}</code></pre>
+    </div>
+  </div>
+
+  <div class="callout">
+    <span class="callout__label">Demo — trick question</span>
+    Flash the board with this code. Is the timer interrupt actually firing and toggling the LED? <b>Yes</b> — just not visibly to a human eye. Toggling a pin 1000 times a second means it switches state every 0.5 ms, which is far faster than your eye's flicker threshold (~60 Hz / ~16 ms). It just looks constantly, dimly lit.
+  </div>
+</section>
+<section class="section" id="software-layer">
+  <div class="eyebrow">03 · EXAMPLES</div>
+  <h2>Making it visible: a software counter riding on top</h2>
+  <p class="lede">We want a blink a human can actually see — say, once per second. But we also want the accuracy of a fast, precise 1 kHz hardware tick. Solution: keep the hardware timer at 1 kHz, and count interrupts in software inside the ISR, only acting every 1000 of them.</p>
+
+  <pre><code><span class="tok-type">void</span> <span class="tok-fn">TIM16_IRQHandler</span>(<span class="tok-type">void</span>) {
+  <span class="tok-kw">if</span> (TIM16->SR & (<span class="tok-num">1</span><<<span class="tok-num">0</span>)) {
+    TIM16->SR &= ~(<span class="tok-num">1</span><<<span class="tok-num">0</span>);
+    <span class="tok-kw">static</span> <span class="tok-type">uint16_t</span> led_timer = <span class="tok-num">0</span>;
+    led_timer++;
+    <span class="tok-com">// Toggle every 1000 interrupts = every 1000 ms = 1 s</span>
+    <span class="tok-kw">if</span>(led_timer >= <span class="tok-num">1000</span>){
+      led_timer = <span class="tok-num">0</span>;
+      GPIO_OutputTogglePin(GPIOA,<span class="tok-num">5</span>); <span class="tok-com">// on 1s, off 1s → period 2s</span>
+    }
+  }
+}</code></pre>
+
+  <div class="callout teal">
+    <span class="callout__label">Why <code>static</code>?</span>
+    A normal local variable is wiped out and recreated every time the function runs. <code>static</code> makes <code>led_timer</code> keep its value between calls — exactly what we need, since it has to keep accumulating across thousands of separate interrupts.
+  </div>
+
+  <p>This is effectively a <b>second, software-side prescaler</b> stacked on top of the hardware one — useful whenever the delay you want is longer than a single 16-bit ARR can conveniently reach, or you want several different timings driven from one physical timer.</p>
+
+  <div class="widget">
+    <div class="widget__title"><span class="dot"></span> Watch the two layers run together</div>
+    <div style="display:flex;align-items:center;gap:22px;flex-wrap:wrap;">
+      <div>
+        <div style="font-size:12px;color:var(--text-mute);margin-bottom:6px;">Hardware interrupts fired (1 kHz)</div>
+        <div class="readout" id="swHwCount" style="font-size:22px;min-width:110px;">0</div>
+      </div>
+      <div style="font-size:22px;color:var(--text-mute);">÷1000→</div>
+      <div>
+        <div style="font-size:12px;color:var(--text-mute);margin-bottom:6px;">Visible LED toggles</div>
+        <div class="readout" id="swLedCount" style="font-size:22px;min-width:90px;">0</div>
+      </div>
+      <div id="swLedMount"></div>
+    </div>
+    <div class="progress" style="margin-top:16px;"><div class="progress__fill" id="swProgress"></div></div>
+    <div class="btnrow"><button class="btn primary" id="swPlayBtn">▶ Run (sped up ~50×)</button></div>
+  </div>
+</section>
+<section class="section" id="wrappers">
+  <div class="eyebrow">03 · EXAMPLES</div>
+  <h2>Cleaner code: wrapper functions</h2>
+  <p class="lede">Notice how similar the setup code looks every time: enable a clock, configure some bits, enable an interrupt. Peripherals of the same type share the same register layout — GPIOA and GPIOB are identical structs at different addresses, and so are TIM16 and TIM17. That repetition is exactly what functions are for.</p>
+
+  <p>We write a small custom driver: a <b>header file</b> (declares what exists — types, function names) and a <b>source file</b> (defines how each function actually works).</p>
+
+  <div class="codepanel">
+    <div class="codepanel__tabs">
+      <button class="codepanel__tab active" data-tab="w1">my_stm_helper.h</button>
+      <button class="codepanel__tab" data-tab="w2">my_stm_helper.c</button>
+    </div>
+    <div class="codepanel__panel active" data-panel="w1">
+<pre><code><span class="tok-kw">#ifndef</span> MY_STM_HELPER_H
+<span class="tok-kw">#define</span> MY_STM_HELPER_H
+<span class="tok-kw">#include</span> <span class="tok-str">"stm32c0xx.h"</span>
+<span class="tok-kw">#include</span> <span class="tok-str">&lt;stdbool.h&gt;</span>
+
+<span class="tok-kw">typedef enum</span> { GPIOA_BUS, GPIOB_BUS, TIM16_BUS, TIM17_BUS } PeripheralBus_t;
+<span class="tok-kw">typedef enum</span> { INPUT=<span class="tok-num">0b00</span>, OUTPUT=<span class="tok-num">0b01</span>, ALT=<span class="tok-num">0b10</span>, ANALOG=<span class="tok-num">0b11</span> } GPIOMode_t;
+<span class="tok-kw">typedef enum</span> { NONE=<span class="tok-num">0b00</span>, PULL_UP=<span class="tok-num">0b01</span>, PULL_DOWN=<span class="tok-num">0b10</span> } GPIOPull_t;
+
+<span class="tok-type">void</span> Clock_Enable(PeripheralBus_t peripheral);
+<span class="tok-type">void</span> GPIO_InitPin(GPIO_TypeDef *port, <span class="tok-type">uint8_t</span> pin, GPIOMode_t mode, GPIOPull_t pull);
+<span class="tok-type">void</span> Timer_Init(TIM_TypeDef *timer, IRQn_Type irq_type, <span class="tok-type">uint16_t</span> psc, <span class="tok-type">uint16_t</span> arr, <span class="tok-type">bool</span> enable_interrupt);
+<span class="tok-type">void</span> GPIO_OutputTogglePin(GPIO_TypeDef *port, <span class="tok-type">uint8_t</span> pin);
+
+<span class="tok-kw">#endif</span></code></pre>
+    </div>
+    <div class="codepanel__panel" data-panel="w2">
+<pre><code><span class="tok-kw">#include</span> <span class="tok-str">"my_stm_helper.h"</span>
+
+<span class="tok-type">void</span> <span class="tok-fn">Clock_Enable</span>(PeripheralBus_t peripheral) {
+  <span class="tok-kw">switch</span> (peripheral) {
+    <span class="tok-kw">case</span> GPIOA_BUS: RCC->IOPENR  |= <span class="tok-num">1</span><<<span class="tok-num">0</span>;  <span class="tok-kw">break</span>;
+    <span class="tok-kw">case</span> GPIOB_BUS: RCC->IOPENR  |= <span class="tok-num">1</span><<<span class="tok-num">1</span>;  <span class="tok-kw">break</span>;
+    <span class="tok-kw">case</span> TIM16_BUS: RCC->APBENR2|= <span class="tok-num">1</span><<<span class="tok-num">17</span>; <span class="tok-kw">break</span>;
+    <span class="tok-kw">case</span> TIM17_BUS: RCC->APBENR2|= <span class="tok-num">1</span><<<span class="tok-num">18</span>; <span class="tok-kw">break</span>;
+  }
+}
+
+<span class="tok-type">void</span> <span class="tok-fn">GPIO_InitPin</span>(GPIO_TypeDef *port, <span class="tok-type">uint8_t</span> pin, GPIOMode_t mode, GPIOPull_t pull) {
+  port->MODER &= ~(<span class="tok-num">0b11</span> << (pin*<span class="tok-num">2</span>));
+  port->MODER |=  (mode << (pin*<span class="tok-num">2</span>));
+  port->PUPDR &= ~(<span class="tok-num">0b11</span> << (pin*<span class="tok-num">2</span>));
+  port->PUPDR |=  (pull << (pin*<span class="tok-num">2</span>));
+}
+
+<span class="tok-type">void</span> <span class="tok-fn">Timer_Init</span>(TIM_TypeDef *timer, IRQn_Type irq_type, <span class="tok-type">uint16_t</span> psc, <span class="tok-type">uint16_t</span> arr, <span class="tok-type">bool</span> enable_interrupt) {
+  timer->PSC = psc;
+  timer->ARR = arr;
+  <span class="tok-kw">if</span> (enable_interrupt) {
+    timer->DIER |= <span class="tok-num">1</span><<<span class="tok-num">0</span>;
+    NVIC_EnableIRQ(irq_type);
+  }
+  timer->CR1 |= <span class="tok-num">1</span><<<span class="tok-num">0</span>;
+}
+
+<span class="tok-type">void</span> <span class="tok-fn">GPIO_OutputTogglePin</span>(GPIO_TypeDef *port, <span class="tok-type">uint8_t</span> pin) {
+  port->ODR ^= (<span class="tok-num">1</span> << pin);
+}</code></pre>
+    </div>
+  </div>
+
+  <p>With the driver written once, <code>main()</code> becomes almost self-explanatory:</p>
+  <pre><code><span class="tok-type">int</span> <span class="tok-fn">main</span>(<span class="tok-type">void</span>){
+  Clock_Enable(GPIOA_BUS);
+  Clock_Enable(TIM16_BUS);
+  GPIO_InitPin(GPIOA, <span class="tok-num">5</span>, OUTPUT, NONE);
+  Timer_Init(TIM16, TIM16_IRQn, <span class="tok-num">47</span>, <span class="tok-num">999</span>, <span class="tok-num">1</span>);  <span class="tok-com">// 1 kHz, interrupts on</span>
+  <span class="tok-kw">while</span>(<span class="tok-num">1</span>){ }
+}</code></pre>
+
+  <div class="callout">
+    <span class="callout__label">What's an <code>enum</code>, again?</span>
+    An <code>enum</code> (enumeration) defines a small named set of integer options, so a function call like <code>GPIO_InitPin(GPIOA, 5, OUTPUT, NONE)</code> reads like English instead of a string of magic numbers such as <code>0b01</code>. It costs nothing at runtime and makes code dramatically easier for a human to check.
+  </div>
+</section>
+<section class="section" id="example-button">
+  <div class="eyebrow">03 · EXAMPLES</div>
+  <h2>Example 2 — a pushbutton toggles the blinking</h2>
+  <p class="lede">Same 1 kHz-driven, once-a-second LED blink on PA5 — but now a pushbutton on PB11 turns the blinking on and off. The button returns HIGH when not pressed (pulled up), so we watch for a <b>falling edge</b>. This reuses the EXTI (external interrupt) setup from Lecture 3.</p>
+
+  <p>The trick: two <i>separate</i> interrupts — the button's EXTI interrupt and the timer's update interrupt — communicate through one shared flag, <code>is_blinking</code>. The button ISR only flips the flag; the timer ISR is the only place that actually touches the LED.</p>
+
+  <div class="codepanel">
+    <div class="codepanel__tabs">
+      <button class="codepanel__tab active" data-tab="e1">main()</button>
+      <button class="codepanel__tab" data-tab="e2">EXTI4_15_IRQHandler()</button>
+      <button class="codepanel__tab" data-tab="e3">TIM16_IRQHandler()</button>
+    </div>
+    <div class="codepanel__panel active" data-panel="e1">
+<pre><code><span class="tok-kw">#include</span> <span class="tok-str">"my_stm_helper.h"</span>
+<span class="tok-type">volatile uint8_t</span> is_blinking = <span class="tok-num">1</span>; <span class="tok-com">// shared between two ISRs → must be volatile</span>
+
+<span class="tok-type">int</span> <span class="tok-fn">main</span>(<span class="tok-type">void</span>){
+  Clock_Enable(GPIOA_BUS);
+  Clock_Enable(GPIOB_BUS);
+  Clock_Enable(TIM16_BUS);
+  GPIO_InitPin(GPIOA, <span class="tok-num">5</span>,  OUTPUT, NONE);
+  GPIO_InitPin(GPIOB, <span class="tok-num">11</span>, INPUT,  PULL_UP);
+  EXTI_InitPin(EXTI_GPIOB, <span class="tok-num">11</span>, FALLING, EXTI4_15_IRQn);
+  Timer_Init(TIM16, TIM16_IRQn, <span class="tok-num">47</span>, <span class="tok-num">999</span>, <span class="tok-num">1</span>);
+
+  NVIC_SetPriority(TIM16_IRQn, <span class="tok-num">1</span>);
+  NVIC_SetPriority(EXTI4_15_IRQn, <span class="tok-num">2</span>);
+  <span class="tok-kw">while</span>(<span class="tok-num">1</span>){ }
+}</code></pre>
+    </div>
+    <div class="codepanel__panel" data-panel="e2">
+<pre><code><span class="tok-type">void</span> <span class="tok-fn">EXTI4_15_IRQHandler</span>(<span class="tok-type">void</span>){
+  <span class="tok-kw">if</span> (EXTI->FPR1 & (<span class="tok-num">1</span><<<span class="tok-num">11</span>)){
+    is_blinking = !is_blinking;      <span class="tok-com">// flip on/off</span>
+    EXTI->FPR1 |= (<span class="tok-num">1</span><<<span class="tok-num">11</span>);   <span class="tok-com">// write 1 to clear the pending flag</span>
+  }
+}</code></pre>
+    </div>
+    <div class="codepanel__panel" data-panel="e3">
+<pre><code><span class="tok-type">void</span> <span class="tok-fn">TIM16_IRQHandler</span>(<span class="tok-type">void</span>) {
+  <span class="tok-kw">if</span> (TIM16->SR & (<span class="tok-num">1</span><<<span class="tok-num">0</span>)) {
+    TIM16->SR &= ~(<span class="tok-num">1</span><<<span class="tok-num">0</span>);
+    <span class="tok-kw">static uint16_t</span> led_timer = <span class="tok-num">0</span>;
+    <span class="tok-kw">if</span>(is_blinking){
+      led_timer++;
+      <span class="tok-kw">if</span>(led_timer>=<span class="tok-num">1000</span>){ led_timer=<span class="tok-num">0</span>; GPIO_OutputTogglePin(GPIOA,<span class="tok-num">5</span>); }
+    } <span class="tok-kw">else</span>{
+      led_timer = <span class="tok-num">0</span>;
+      GPIO_OutputClearPin(GPIOA,<span class="tok-num">5</span>); <span class="tok-com">// switch LED off</span>
+    }
+  }
+}</code></pre>
+    </div>
+  </div>
+
+  <div class="callout teal">
+    <span class="callout__label">Why set priorities?</span>
+    <code>NVIC_SetPriority</code> tells the NVIC which interrupt should win if two arrive at almost the same instant. Here the timer (priority 1) outranks the button (priority 2 — remember, lower number usually means higher priority on Cortex-M), keeping the blink timing rock solid even if the button is mashed.
+  </div>
+
+  <details class="acc">
+    <summary>Refresher: what does <code>EXTI_InitPin()</code> actually do?</summary>
+    <div class="acc__body">
+      <p>This is the EXTI driver from Lecture 3, reused here unchanged — it maps a GPIO pin to an EXTI interrupt line, picks which edge(s) to trigger on, and switches the NVIC line on.</p>
+      <pre><code><span class="tok-type">void</span> <span class="tok-fn">EXTI_InitPin</span>(EXTIPort_t port, <span class="tok-type">uint8_t</span> pin, EXTITrigger_t trigger, IRQn_Type irq_type) {
+  <span class="tok-type">uint8_t</span> idx   = pin / <span class="tok-num">4</span>;         <span class="tok-com">// which EXTICR register (0–3)</span>
+  <span class="tok-type">uint8_t</span> shift = (pin % <span class="tok-num">4</span>) * <span class="tok-num">8</span>;  <span class="tok-com">// which 8-bit field inside it</span>
+
+  EXTI->EXTICR[idx] &= ~(<span class="tok-num">0xFF</span> << shift);
+  EXTI->EXTICR[idx] |=  (port << shift);      <span class="tok-com">// route this pin's port to the EXTI line</span>
+
+  EXTI->FTSR1 &= ~(<span class="tok-num">1</span> << pin);
+  EXTI->RTSR1 &= ~(<span class="tok-num">1</span> << pin);
+  <span class="tok-kw">if</span> (trigger==EXTI_TRIGGER_FALLING || trigger==EXTI_TRIGGER_BOTH) EXTI->FTSR1 |= (<span class="tok-num">1</span> &lt;&lt; pin);
+  <span class="tok-kw">if</span> (trigger==EXTI_TRIGGER_RISING  || trigger==EXTI_TRIGGER_BOTH) EXTI->RTSR1 |= (<span class="tok-num">1</span> &lt;&lt; pin);
+
+  EXTI->IMR1 |= (<span class="tok-num">1</span> << pin);   <span class="tok-com">// unmask (enable) this line</span>
+  EXTI->FPR1 |= (<span class="tok-num">1</span> << pin);   <span class="tok-com">// clear any stale pending flags first</span>
+  EXTI->RPR1 |= (<span class="tok-num">1</span> << pin);
+  NVIC_EnableIRQ(irq_type);
+}</code></pre>
+    </div>
+  </details>
+</section>
+<section class="section" id="bounce">
+  <div class="eyebrow">03 · EXAMPLES</div>
+  <h2>The bounce problem</h2>
+  <p class="lede">Run the button example on real hardware for a while and something odd happens: sometimes one press seems to toggle the LED two or three times instead of once. Nothing is wrong with your code — it's the switch itself.</p>
+
+  <p>A mechanical pushbutton isn't a perfect, instant connection. When you press it, the metal contacts physically bounce against each other for a few milliseconds before settling — a real switch closing rapidly, chaotically, on and off, many times in a row, before finally staying closed. Your EXTI pin sees every single one of those bounces as a separate falling edge, so it fires the interrupt several times for what felt like a single press.</p>
+
+  <div class="widget">
+    <div class="widget__title"><span class="dot" style="background:var(--red)"></span> What the pin actually sees when you press a button</div>
+    <div id="bounceRawMount"></div>
+    <p style="font-size:13px;color:var(--text-mute);margin-top:10px;">A clean digital sensor doesn't have this problem — EXTI interrupts are fine for those. It's specifically <b>mechanical</b> switches that bounce.</p>
+  </div>
+
+  <div class="callout red">
+    <span class="callout__label">The fix</span>
+    Ignore the noisy EXTI edge entirely for this button. Instead, use the timer — which is already running — to <i>sample</i> the pin at a steady, controlled rate (say, every 10 ms) and only trust the reading once it's been stable for several samples in a row. This is called <b>debouncing</b>, and it's exactly what LO2 asks you to implement.
+  </div>
+</section>
+<section class="section wide" id="debounce">
+  <div class="eyebrow">03 · EXAMPLES</div>
+  <h2>Example 3 — debouncing with a timer only</h2>
+  <p class="lede">Drop the EXTI interrupt entirely. TIM16 is already firing at 1 kHz (once every 1 ms); we just count 10 of those to get a steady 10 ms sampling rate, and keep a short rolling history of the pin's readings.</p>
+
+  <h3 style="font-size:19px;">The shift-register trick</h3>
+  <p>Keep one byte, <code>button_history</code>, starting at <code>0xFF</code> (all 1s — "released"). Every 10 ms: shift it left by one bit (making room, discarding the oldest sample) and OR in the pin's current reading at bit 0.</p>
+
+  <pre><code><span class="tok-com">// Shift history left; new sample goes into bit 0</span>
+button_history = button_history << <span class="tok-num">1</span>;
+pin_state = GPIO_InputReadPin(GPIOB, <span class="tok-num">11</span>);
+<span class="tok-kw">if</span> (pin_state) { button_history |= (<span class="tok-num">1</span><<<span class="tok-num">0</span>); }  <span class="tok-com">// record a HIGH sample</span>
+
+<span class="tok-com">// Pull-up resistor: pin=1 → not pressed, pin=0 → pressed</span>
+<span class="tok-com">// 0x80 = 0b10000000 → the last 7 samples were all LOW → safely "pressed"</span>
+<span class="tok-kw">if</span> (button_history == <span class="tok-num">0x80</span>) {
+  is_blinking = !is_blinking;
+}</code></pre>
+
+  <p>Why <code>0x80</code> specifically, and not <code>0x00</code>? Because <code>0x80</code> (<code>0b10000000</code>) only ever appears for one instant: exactly when the seven most-recent samples are all LOW <i>and</i> the sample eight steps ago was still HIGH — in other words, the precise moment a clean, sustained press has just been confirmed. It fires once per press, not continuously while held down.</p>
+
+  <div class="widget">
+    <div class="widget__title"><span class="dot"></span> Simulate a real, bouncy button press</div>
+    <p style="font-size:13px;color:var(--text-dim);margin-top:-4px;">Each step below is one simulated 10 ms sample. Watch <code>button_history</code> shift left and fill in as the raw signal bounces, then settles.</p>
+
+    <div style="font-size:12px;color:var(--text-mute);margin-top:10px;">Raw pin reading over time (green = HIGH / released, red = LOW / pressed)</div>
+    <div class="timeline" id="bounceTimeline"></div>
+
+    <div style="font-size:12px;color:var(--text-mute);margin-top:16px;">button_history (bit 7 ← … ← bit 0, MSB to LSB)</div>
+    <div class="bitreg" id="bounceReg"></div>
+    <div style="display:flex;gap:20px;align-items:center;margin-top:10px;flex-wrap:wrap;">
+      <div class="readout" id="bounceHex" style="font-size:20px;">0xFF</div>
+      <div id="bounceLedMount"></div>
+      <div id="bounceResult" class="mono" style="font-size:13.5px;color:var(--text-dim);"></div>
+    </div>
+
+    <div class="btnrow">
+      <button class="btn primary" id="bounceRunBtn">▶ Press the button</button>
+      <button class="btn ghost" id="bounceResetBtn">↺ Reset</button>
+    </div>
+  </div>
+
+  <p>Putting the full ISR together — a hardware timer running two independent jobs at once (debounce sampling and LED blinking) from a single 1 kHz tick:</p>
+
+  <pre><code><span class="tok-type">void</span> <span class="tok-fn">TIM16_IRQHandler</span>(<span class="tok-type">void</span>) {
+  <span class="tok-kw">if</span> (TIM16->SR & (<span class="tok-num">1</span><<<span class="tok-num">0</span>)) {
+    TIM16->SR &= ~(<span class="tok-num">1</span><<<span class="tok-num">0</span>);
+    <span class="tok-kw">static uint16_t</span> led_timer = <span class="tok-num">0</span>;
+    <span class="tok-kw">static uint16_t</span> debounce_timer = <span class="tok-num">0</span>;
+    <span class="tok-kw">static uint8_t</span>  button_history = <span class="tok-num">0xFF</span>;
+    <span class="tok-kw">static bool</span>     pin_state = <span class="tok-num">1</span>;
+
+    debounce_timer++;
+    <span class="tok-kw">if</span> (debounce_timer >= <span class="tok-num">10</span>) {           <span class="tok-com">// every 10 ms</span>
+      debounce_timer = <span class="tok-num">0</span>;
+      button_history = button_history << <span class="tok-num">1</span>;
+      pin_state = GPIO_InputReadPin(GPIOB, <span class="tok-num">11</span>);
+      <span class="tok-kw">if</span> (pin_state) { button_history |= (<span class="tok-num">1</span><<<span class="tok-num">0</span>); }
+      <span class="tok-kw">if</span> (button_history == <span class="tok-num">0x80</span>) { is_blinking = !is_blinking; }
+    }
+
+    <span class="tok-kw">if</span>(is_blinking){
+      led_timer++;
+      <span class="tok-kw">if</span> (led_timer >= <span class="tok-num">1000</span>) { led_timer=<span class="tok-num">0</span>; GPIO_OutputTogglePin(GPIOA,<span class="tok-num">5</span>); }
+    } <span class="tok-kw">else</span>{
+      led_timer = <span class="tok-num">0</span>;
+      GPIO_OutputClearPin(GPIOA,<span class="tok-num">5</span>);
+    }
+  }
+}</code></pre>
+
+  <div class="callout">
+    <span class="callout__label">Why this matters (LO2)</span>
+    This is a fully <b>non-blocking</b> debounce: the CPU is never stuck waiting, there's no software delay loop, and one hardware timer handles two completely different timing jobs simultaneously just by counting interrupts differently in software. This pattern — one fast, reliable hardware tick, with software counters layered on top for each job you need — is the single most reusable idea in this whole chapter.
+  </div>
+</section>
+<section class="section wide" id="summary">
+  <div class="eyebrow">04 · WRAP-UP</div>
+  <h2>Cheat sheet &amp; recap</h2>
+  <p class="lede">Everything from this chapter, condensed onto one page.</p>
+
+  <h3 style="font-size:19px;">Learning outcomes — can you do this now?</h3>
+  <div class="grid2">
+    <div class="card">
+      <b style="color:var(--amber);">LO1</b>
+      <p style="font-size:14.5px;margin-top:6px;">Understand hardware timers and event counters — what CNT, PSC and ARR do, the difference between basic / general-purpose / advanced-control timers, and how to compute PSC and ARR for a target frequency.</p>
+    </div>
+    <div class="card">
+      <b style="color:var(--amber);">LO2</b>
+      <p style="font-size:14.5px;margin-top:6px;">Implement non-blocking debounce solutions using interrupts and timers — sampling a pin on a timer tick and using a shift-register history to confirm a clean press, with zero blocking delays.</p>
+    </div>
+  </div>
+
+  <h3 style="font-size:19px;margin-top:32px;">Register quick reference (TIM16, and any general-purpose timer)</h3>
+  <table>
+    <tr><th>Register</th><th>What you do with it</th><th>Typical line</th></tr>
+    <tr class="cheat-highlight"><td><code>RCC->APBENR2</code></td><td>Turn the timer's clock on before anything else</td><td class="mono">|= 1&lt;&lt;17</td></tr>
+    <tr><td><code>PSC</code></td><td>Write the prescaler value (scales f<sub>clk</sub> down)</td><td class="mono">= 47</td></tr>
+    <tr><td><code>ARR</code></td><td>Write the auto-reload / top count value</td><td class="mono">= 999</td></tr>
+    <tr><td><code>CNT</code></td><td>Current live count (usually just read, rarely written)</td><td class="mono">TIM16->CNT</td></tr>
+    <tr class="cheat-highlight"><td><code>DIER</code></td><td>Enable the update interrupt (UIE, bit 0)</td><td class="mono">|= 1&lt;&lt;0</td></tr>
+    <tr><td><code>CR1</code></td><td>Enable the counter itself (CEN, bit 0)</td><td class="mono">|= 1&lt;&lt;0</td></tr>
+    <tr class="cheat-highlight"><td><code>SR</code></td><td>Check (UIF) then clear the update flag inside the ISR</td><td class="mono">&= ~(1&lt;&lt;0)</td></tr>
+    <tr><td>NVIC</td><td>Let the interrupt reach the CPU at all</td><td class="mono">NVIC_EnableIRQ(TIM16_IRQn)</td></tr>
+  </table>
+
+  <h3 style="font-size:19px;margin-top:32px;">The four formulas</h3>
+  <table>
+    <tr><td class="mono">f_tim = f_clk / (PSC+1)</td></tr>
+    <tr><td class="mono">T_tick = (PSC+1) / f_clk</td></tr>
+    <tr><td class="mono">T_update = (PSC+1)(ARR+1) / f_clk</td></tr>
+    <tr><td class="mono">f_update = f_clk / ((PSC+1)(ARR+1))</td></tr>
+  </table>
+
+  <h3 style="font-size:19px;margin-top:32px;">The setup sequence, every single time</h3>
+  <p class="mono" style="font-size:14.5px;color:var(--text-dim);">Enable clock (RCC) → set PSC &amp; ARR → enable interrupt (DIER) → enable NVIC line → enable counter (CR1) → handle &amp; clear flag (SR) in the ISR</p>
+
+  <h3 style="font-size:19px;margin-top:32px;">Glossary</h3>
+  <dl class="glossary">
+    <dt>Peripheral</dt><dd>A hardware sub-system built into the chip (a timer, a GPIO port, a UART...) controlled through registers.</dd>
+    <dt>Register</dt><dd>A named, addressable slot of bits that configures or reports on a peripheral.</dd>
+    <dt>Prescaler (PSC)</dt><dd>Divides the fast system clock down to a slower, usable timer clock.</dd>
+    <dt>Auto-reload (ARR)</dt><dd>The value CNT counts up to before resetting and firing an update event.</dd>
+    <dt>Update event</dt><dd>The moment CNT reaches ARR and resets — can be configured to raise an interrupt.</dd>
+    <dt>ISR</dt><dd>Interrupt Service Routine — the function that runs automatically when a peripheral interrupts the CPU.</dd>
+    <dt>NVIC</dt><dd>Nested Vectored Interrupt Controller — routes interrupt signals from peripherals to the CPU core.</dd>
+    <dt>Polling</dt><dd>Repeatedly checking a condition in software instead of waiting for an interrupt — simple but wastes CPU time.</dd>
+    <dt>Debounce</dt><dd>Filtering out the rapid electrical noise a mechanical switch produces when its contacts physically settle.</dd>
+    <dt>volatile</dt><dd>A C keyword that stops the compiler from caching a variable that can change outside normal program flow.</dd>
+  </dl>
+</section>
+
+
+      <footer class="pagefoot">
+        Interactive notes for ENGE X200 · Lecture 4 — Timers. Built from the lecture slides, register tables (RM0490) and worked examples, rewritten and expanded for self-study. Everything on this page runs locally in your browser — nothing is sent anywhere.
+      </footer>
+    </div>
+  </main>
+</div>
+
+<script>
+/* ============================================================
+   NAV: mobile toggle + scrollspy
+   ============================================================ */
+const navToggle = document.getElementById('navToggle');
+navToggle.addEventListener('click', ()=> document.body.classList.toggle('nav-open'));
+document.querySelectorAll('.navlink').forEach(a=>{
+  a.addEventListener('click', ()=> document.body.classList.remove('nav-open'));
+});
+
+const sections = () => Array.from(document.querySelectorAll('.section[id]'));
+const navlinks = Array.from(document.querySelectorAll('.navlink'));
+function onScrollSpy(){
+  let current = null;
+  for(const sec of sections()){
+    const rect = sec.getBoundingClientRect();
+    if(rect.top <= 140) current = sec.id;
+  }
+  navlinks.forEach(l=>{
+    l.classList.toggle('active', l.getAttribute('href') === '#'+current);
+  });
+}
+document.addEventListener('scroll', onScrollSpy, {passive:true});
+window.addEventListener('load', onScrollSpy);
+
+/* ============================================================
+   CODE TABS
+   ============================================================ */
+document.querySelectorAll('.codepanel').forEach(panel=>{
+  const tabs = panel.querySelectorAll('.codepanel__tab');
+  tabs.forEach(tab=>{
+    tab.addEventListener('click', ()=>{
+      panel.querySelectorAll('.codepanel__tab').forEach(t=>t.classList.remove('active'));
+      panel.querySelectorAll('.codepanel__panel').forEach(p=>p.classList.remove('active'));
+      tab.classList.add('active');
+      panel.querySelector('.codepanel__panel[data-panel="'+tab.dataset.tab+'"]').classList.add('active');
+    });
+  });
+});
+
+/* ============================================================
+   REUSABLE TICK-COUNTER WIDGET (CNT climbing 0..ARR, reset, LED)
+   ============================================================ */
+function makeTickCounter(mountEl, opts){
+  opts = opts || {};
+  const readOnly = !!opts.readOnly;
+  mountEl.innerHTML = `
+    <div style="display:flex;align-items:center;gap:22px;flex-wrap:wrap;">
+      <div style="display:flex;align-items:center;gap:14px;">
+        <div>
+          <div style="font-size:11.5px;color:var(--text-mute);margin-bottom:6px;">CNT</div>
+          <div class="readout" data-r="cnt">0</div>
+        </div>
+        <div style="font-size:22px;color:var(--text-mute);">/</div>
+        <div>
+          <div style="font-size:11.5px;color:var(--text-mute);margin-bottom:6px;">ARR</div>
+          <div class="readout" data-r="arr" style="color:var(--text-dim);text-shadow:none;">999</div>
+        </div>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px;">
+        <span class="led amber-led" data-r="led"></span>
+        <span style="font-size:12.5px;color:var(--text-mute);">UIF / LED</span>
+      </div>
+      <div style="font-size:12.5px;color:var(--text-mute);" data-r="fires">0 update events</div>
+    </div>
+    <div class="progress"><div class="progress__fill" data-r="bar"></div></div>
+  `;
+  const els = {
+    cnt: mountEl.querySelector('[data-r=cnt]'),
+    arr: mountEl.querySelector('[data-r=arr]'),
+    led: mountEl.querySelector('[data-r=led]'),
+    bar: mountEl.querySelector('[data-r=bar]'),
+    fires: mountEl.querySelector('[data-r=fires]'),
+  };
+  let arrVal = opts.arr || 999;
+  let cnt = 0, fires = 0, timerId = null;
+  els.arr.textContent = arrVal;
+
+  function stepMs(){
+    // visually sweep 0..ARR in ~2.2s regardless of ARR size
+    return Math.min(500, Math.max(12, 2200/(arrVal+1)));
+  }
+  function tick(){
+    cnt++;
+    if(cnt > arrVal){
+      cnt = 0; fires++;
+      els.led.classList.add('on');
+      mountEl.querySelector('.readout[data-r=cnt]').parentElement && 0;
+      els.fires.textContent = fires + ' update event' + (fires===1?'':'s');
+      setTimeout(()=> els.led.classList.remove('on'), Math.min(180, stepMs()*3));
+    }
+    els.cnt.textContent = cnt;
+    els.bar.style.width = (100*cnt/arrVal)+'%';
+    restart();
+  }
+  function restart(){
+    clearTimeout(timerId);
+    timerId = setTimeout(tick, stepMs());
+  }
+  function setArr(v){ arrVal = Math.max(1, v); cnt=0; els.arr.textContent = arrVal; }
+  restart();
+  return { setArr };
+}
+
+/* Hero mini demo (fixed, decorative) */
+makeTickCounter(document.getElementById('heroCounterMount'), {arr:59, readOnly:true});
+
+/* ============================================================
+   TIMER MATHS CALCULATOR
+   ============================================================ */
+(function(){
+  const fclkEl = document.getElementById('calcFclk');
+  const pscEl  = document.getElementById('calcPsc');
+  const arrEl  = document.getElementById('calcArr');
+  const mount  = document.getElementById('calcCounterMount');
+  const counter = makeTickCounter(mount, {arr: parseInt(arrEl.value,10)});
+
+  function fmtFreq(hz){
+    if(hz >= 1e6) return (hz/1e6).toFixed(3).replace(/\.?0+$/,'')+' MHz';
+    if(hz >= 1e3) return (hz/1e3).toFixed(3).replace(/\.?0+$/,'')+' kHz';
+    return hz.toFixed(2)+' Hz';
+  }
+  function fmtTime(s){
+    if(s < 1e-3) return (s*1e6).toFixed(2)+' µs';
+    if(s < 1) return (s*1e3).toFixed(3)+' ms';
+    return s.toFixed(3)+' s';
+  }
+  function recalc(){
+    const fclk = parseFloat(fclkEl.value)*1e6;
+    const psc = Math.max(0, parseInt(pscEl.value||0,10));
+    const arr = Math.max(0, parseInt(arrEl.value||0,10));
+    const ftim = fclk/(psc+1);
+    const Ttick = 1/ftim;
+    const Tupdate = Ttick*(arr+1);
+    const fupdate = 1/Tupdate;
+    document.getElementById('statFtim').textContent = fmtFreq(ftim);
+    document.getElementById('statTtick').textContent = fmtTime(Ttick);
+    document.getElementById('statTupdate').textContent = fmtTime(Tupdate);
+    document.getElementById('statFupdate').textContent = fmtFreq(fupdate);
+    counter.setArr(arr);
+  }
+  [fclkEl,pscEl,arrEl].forEach(el=> el.addEventListener('input', recalc));
+  document.getElementById('calcExampleBtn').addEventListener('click', ()=>{
+    fclkEl.value = 48; pscEl.value = 47; arrEl.value = 999; recalc();
+  });
+  document.querySelectorAll('[data-target]').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      const target = parseFloat(btn.dataset.target);
+      const fclk = parseFloat(fclkEl.value)*1e6;
+      let pscPlus1 = Math.max(1, Math.round(fclk/1e6)); // scale to ~1MHz
+      let arrPlus1 = Math.max(1, Math.round((fclk/pscPlus1)/target));
+      pscEl.value = pscPlus1-1;
+      arrEl.value = arrPlus1-1;
+      recalc();
+    });
+  });
+  recalc();
+})();
+
+/* ============================================================
+   MOTIVATION: BLOCKING VS NON-BLOCKING DEMO
+   ============================================================ */
+(function(){
+  const startBtn = document.getElementById('blockStartBtn');
+  const doorBtn  = document.getElementById('blockDoorBtn');
+  const status   = document.getElementById('blockStatus');
+  let busy = false;
+  startBtn.addEventListener('click', ()=>{
+    if(busy) return;
+    busy = true;
+    status.textContent = '🔥 Cooking... running a blocking software delay loop (~1.4s of real, frozen time)';
+    status.style.color = 'var(--red)';
+    startBtn.disabled = true;
+    // yield one frame so the status text actually paints before we block
+    requestAnimationFrame(()=> requestAnimationFrame(()=>{
+      const until = performance.now() + 1400;
+      let x = 0;
+      while(performance.now() < until){ x++; } // genuinely blocks the main thread
+      status.textContent = '✅ Done cooking (loop finished). Did "Open door" respond while this ran?';
+      status.style.color = 'var(--text-dim)';
+      startBtn.disabled = false;
+      busy = false;
+    }));
+  });
+  doorBtn.addEventListener('click', ()=>{
+    status.textContent = '🚪 Door opened! (this click could only register when the CPU/thread was free)';
+    status.style.color = 'var(--green)';
+  });
+})();
+
+(function(){
+  const startBtn = document.getElementById('nbStartBtn');
+  const doorBtn  = document.getElementById('nbDoorBtn');
+  const status   = document.getElementById('nbStatus');
+  let handle = null, opened=false;
+  startBtn.addEventListener('click', ()=>{
+    opened = false;
+    status.textContent = '🔥 Cooking... (hardware timer counting in the background — try the door button now!)';
+    status.style.color = 'var(--amber)';
+    startBtn.disabled = true;
+    clearTimeout(handle);
+    handle = setTimeout(()=>{
+      if(!opened){ status.textContent = '✅ Done cooking — the CPU was free to do anything else the whole time.'; status.style.color = 'var(--text-dim)'; }
+      startBtn.disabled = false;
+    }, 1400);
+  });
+  doorBtn.addEventListener('click', ()=>{
+    opened = true;
+    clearTimeout(handle);
+    status.textContent = '🚪 Door opened instantly — the CPU was never busy-waiting, so it noticed immediately.';
+    status.style.color = 'var(--green)';
+    startBtn.disabled = false;
+  });
+})();
+
+/* ============================================================
+   SOFTWARE LAYER DEMO (led_timer / 1000)
+   ============================================================ */
+(function(){
+  const hwEl = document.getElementById('swHwCount');
+  const ledCountEl = document.getElementById('swLedCount');
+  const barEl = document.getElementById('swProgress');
+  const playBtn = document.getElementById('swPlayBtn');
+  const ledMount = document.getElementById('swLedMount');
+  ledMount.innerHTML = '<span class="led on" id="swLedDot"></span>';
+  const ledDot = document.getElementById('swLedDot');
+  let hw=0, ledCount=0, running=false, ledOn=true, timer=null;
+
+  function step(){
+    hw++;
+    hwEl.textContent = hw;
+    barEl.style.width = (100*(hw%1000)/1000)+'%';
+    if(hw % 1000 === 0){
+      ledOn = !ledOn;
+      ledDot.classList.toggle('on', ledOn);
+      ledCount++;
+      ledCountEl.textContent = ledCount;
+      ledCountEl.parentElement.classList.add('flash');
+      setTimeout(()=>ledCountEl.parentElement.classList.remove('flash'),400);
+    }
+    if(hw >= 4000){ stop(); playBtn.textContent='▶ Run (sped up ~50×)'; return; }
+    timer = setTimeout(step, 20); // ~1000 hw ticks per 20s real -> sped up ~50x vs 1kHz
+  }
+  function stop(){ running=false; clearTimeout(timer); }
+  playBtn.addEventListener('click', ()=>{
+    if(running){ stop(); playBtn.textContent='▶ Resume'; return; }
+    running = true; playBtn.textContent = '⏸ Pause';
+    if(hw>=4000){ hw=0; ledCount=0; hwEl.textContent=0; ledCountEl.textContent=0; }
+    step();
+  });
+})();
+
+/* ============================================================
+   BOUNCE RAW SIGNAL VISUAL (section: the bounce problem)
+   ============================================================ */
+(function(){
+  const mount = document.getElementById('bounceRawMount');
+  if(!mount) return;
+  const raw = [1,1,0,1,0,1,1,0,1,0,0,0,0,0,0,0,0,0];
+  let html = '<div class="timeline">';
+  raw.forEach((v,i)=>{
+    html += `<div class="tick ${v?'hi':'lo'}">${v?'H':'L'}</div>`;
+  });
+  html += '</div>';
+  mount.innerHTML = html;
+})();
+
+/* ============================================================
+   DEBOUNCE SIMULATOR
+   ============================================================ */
+(function(){
+  const timelineEl = document.getElementById('bounceTimeline');
+  const regEl = document.getElementById('bounceReg');
+  const hexEl = document.getElementById('bounceHex');
+  const resultEl = document.getElementById('bounceResult');
+  const runBtn = document.getElementById('bounceRunBtn');
+  const resetBtn = document.getElementById('bounceResetBtn');
+  const ledMount = document.getElementById('bounceLedMount');
+  if(!timelineEl) return;
+  ledMount.innerHTML = '<span class="led amber-led" id="bounceLed"></span> <span style="font-size:12.5px;color:var(--text-mute);">blink state</span>';
+  const ledEl = document.getElementById('bounceLed');
+
+  const samples = [1,1,0,1,0,1,1,0,1,0,0,1,0,0,0,0,0,0,0,0];
+  let history = 0xFF;
+  let step = -1;
+  let running = false;
+  let matched = false;
+  let blinking = true;
+
+  function render(){
+    // timeline
+    timelineEl.innerHTML = samples.map((v,i)=>{
+      let cls = v ? 'hi' : 'lo';
+      if(i===step) cls += ' current';
+      return `<div class="tick ${cls}">${i<=step?(v?'H':'L'):''}</div>`;
+    }).join('');
+    // 8-bit register display, MSB(bit7) to LSB(bit0)
+    let bits = '';
+    for(let b=7;b>=0;b--){
+      const val = (history >> b) & 1;
+      bits += `<div class="bitbox ${val?'hi':'lo'}">${val}</div>`;
+    }
+    regEl.innerHTML = bits;
+    hexEl.textContent = '0x' + history.toString(16).toUpperCase().padStart(2,'0');
+    if(matched){
+      resultEl.innerHTML = '<span style="color:var(--green)">MATCH 0x80 → clean press confirmed, blink toggled ✓</span>';
+    } else if(step>=0){
+      resultEl.textContent = 'watching for 0x80 (0b10000000)…';
+    } else {
+      resultEl.textContent = '';
+    }
+  }
+
+  function reset(){
+    history = 0xFF; step = -1; matched = false; running=false;
+    clearTimeout(window.__bounceTimer);
+    runBtn.disabled = false; runBtn.textContent = '▶ Press the button';
+    render();
+  }
+
+  function tick(){
+    step++;
+    if(step >= samples.length){ runBtn.textContent='▶ Press the button'; runBtn.disabled=false; running=false; return; }
+    history = ((history << 1) & 0xFF) | samples[step];
+    if(history === 0x80 && !matched){
+      matched = true;
+      blinking = !blinking;
+      ledEl.classList.toggle('on', blinking);
+    }
+    render();
+    if(matched){
+      runBtn.textContent='▶ Press the button'; runBtn.disabled=false; running=false;
+      return; // freeze right at the matching frame so the 0x80 is visible
+    }
+    if(step < samples.length-1){
+      window.__bounceTimer = setTimeout(tick, 260);
+    } else {
+      runBtn.textContent='▶ Press the button'; runBtn.disabled=false; running=false;
+    }
+  }
+
+  runBtn.addEventListener('click', ()=>{
+    if(running) return;
+    reset(); running = true; runBtn.disabled = true; runBtn.textContent='running…';
+    tick();
+  });
+  resetBtn.addEventListener('click', reset);
+  reset();
+})();
+</script>
+</body>
+</html>

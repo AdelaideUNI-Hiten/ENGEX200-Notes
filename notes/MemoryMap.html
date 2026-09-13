@@ -1,0 +1,1311 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Memory Maps, Reference Manuals & Registers — ENGE X200</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --navy-950:#071522;
+  --navy-900:#0b2138;
+  --navy-800:#132c46;
+  --navy-700:#1c3b58;
+  --blue-line:#3e7ca6;
+  --blue-line-soft:rgba(122,178,209,0.28);
+  --paper:#faf6ec;
+  --paper-raised:#ffffff;
+  --ink-900:#182530;
+  --ink-700:#33454f;
+  --ink-500:#5b6e78;
+  --copper-700:#9c531c;
+  --copper-600:#b5651d;
+  --copper-500:#cc7a32;
+  --amber-400:#e0a24a;
+  --amber-200:#f3d9ab;
+  --grid-blue:rgba(30,74,110,0.07);
+  --code-navy:#0e2436;
+  --code-cyan:#bfe6f0;
+  --code-amber:#f0b26b;
+  --code-green:#9fd6a3;
+  --good:#3f7d55;
+  --bad:#a34632;
+  --radius-s:6px;
+  --radius-m:10px;
+  --serif-line:78ch;
+}
+*{box-sizing:border-box;}
+html{scroll-behavior:smooth;}
+body{
+  margin:0;
+  background:var(--paper);
+  color:var(--ink-900);
+  font-family:'IBM Plex Sans', sans-serif;
+  font-size:16.5px;
+  line-height:1.65;
+  -webkit-font-smoothing:antialiased;
+}
+h1,h2,h3,h4{
+  font-family:'Space Grotesk', sans-serif;
+  color:var(--navy-900);
+  line-height:1.2;
+  margin:0 0 0.5em 0;
+}
+code, .mono{ font-family:'IBM Plex Mono', monospace; }
+a{ color:var(--copper-700); }
+p{ margin:0 0 1em 0; max-width:var(--serif-line); }
+ul,ol{ padding-left:1.25em; }
+li{ margin-bottom:0.5em; max-width:var(--serif-line); }
+img{max-width:100%;}
+
+/* progress bar */
+#progress{
+  position:fixed; top:0; left:0; height:3px; width:0%;
+  background:linear-gradient(90deg,var(--copper-600),var(--amber-400));
+  z-index:500; transition:width 0.08s linear;
+}
+
+/* layout */
+.layout{ display:grid; grid-template-columns: 280px 1fr; min-height:100vh; }
+
+/* sidebar */
+.sidebar{
+  background:
+    repeating-linear-gradient(0deg, var(--blue-line-soft) 0 1px, transparent 1px 28px),
+    repeating-linear-gradient(90deg, var(--blue-line-soft) 0 1px, transparent 1px 28px),
+    linear-gradient(180deg, var(--navy-950), var(--navy-900));
+  color:#dbe9f2;
+  position:sticky; top:0; height:100vh; overflow-y:auto;
+  padding:26px 22px 30px 26px;
+  border-right:1px solid var(--navy-700);
+}
+.sidebar-brand{
+  font-family:'Space Grotesk', sans-serif;
+  font-weight:700; font-size:1.02rem; color:#fff;
+  letter-spacing:0.01em; margin-bottom:2px;
+}
+.sidebar-sub{ font-size:0.82rem; color:#8fb2c8; margin-bottom:26px; }
+.toc{ list-style:none; margin:0; padding:0; }
+.toc li{ margin:0; max-width:none; }
+.toc a{
+  display:block; text-decoration:none; color:#a9c6d8;
+  font-size:0.9rem; padding:8px 10px 8px 14px;
+  border-left:2px solid transparent;
+  border-radius:0 4px 4px 0;
+  transition:background 0.15s, color 0.15s, border-color 0.15s;
+}
+.toc a:hover{ background:rgba(224,162,74,0.08); color:#fff; }
+.toc a.active{
+  color:#fff; border-left-color:var(--amber-400);
+  background:rgba(224,162,74,0.12); font-weight:500;
+}
+.toc .toc-group-label{
+  font-size:0.7rem; text-transform:none; color:#5f7c8f;
+  margin:16px 0 4px 14px; letter-spacing:0.02em;
+}
+.toc .toc-group-label:first-child{ margin-top:0; }
+
+.menu-toggle{ display:none; }
+
+/* main content */
+main{ padding:0; overflow-x:hidden; }
+.content-inner{ max-width:740px; margin:0 auto; padding:0 28px 60px; }
+.breakout{ max-width:920px; }
+
+/* hero */
+.hero{
+  background:
+    radial-gradient(ellipse 700px 400px at 85% -10%, rgba(224,162,74,0.14), transparent 60%),
+    linear-gradient(180deg, var(--navy-950), var(--navy-900) 70%, var(--navy-800));
+  color:#f2f6f9;
+  padding:64px 28px 46px;
+  position:relative;
+  overflow:hidden;
+}
+.hero::before{
+  content:""; position:absolute; inset:0;
+  background:
+    repeating-linear-gradient(0deg, var(--blue-line-soft) 0 1px, transparent 1px 40px),
+    repeating-linear-gradient(90deg, var(--blue-line-soft) 0 1px, transparent 1px 40px);
+  opacity:0.35; pointer-events:none;
+}
+.hero-inner{ max-width:740px; margin:0 auto; position:relative; }
+.hero-chip{
+  display:inline-flex; align-items:center; gap:8px;
+  font-size:0.8rem; color:var(--amber-200);
+  border:1px solid rgba(224,162,74,0.4);
+  padding:4px 12px; border-radius:100px; margin-bottom:20px;
+  background:rgba(224,162,74,0.08);
+}
+.hero h1{
+  color:#fff; font-size:2.5rem; font-weight:700; margin-bottom:14px; max-width:12ch;
+}
+.hero p.lede{
+  color:#c3d7e2; font-size:1.12rem; max-width:56ch; margin-bottom:8px;
+}
+.hero-course{ color:#8fb2c8; font-size:0.92rem; margin-bottom:34px; }
+
+/* hero memory strip */
+.mem-strip{
+  display:flex; border:1px solid var(--blue-line); border-radius:var(--radius-m);
+  overflow:hidden; height:54px; margin-bottom:10px;
+}
+.mem-strip div{
+  display:flex; align-items:center; justify-content:center;
+  font-family:'IBM Plex Mono', monospace; font-size:0.72rem;
+  color:#0c1c2b; font-weight:600; transform:scaleX(0); transform-origin:left;
+  animation:fillIn 0.9s ease-out forwards;
+  border-right:1px solid rgba(0,0,0,0.15);
+}
+.mem-strip div:last-child{ border-right:none; }
+@keyframes fillIn{ to{ transform:scaleX(1); } }
+.mem-strip .b1{ flex:15; background:#e0a24a; animation-delay:0s; }
+.mem-strip .b2{ flex:20; background:#cc7a32; animation-delay:0.08s; color:#fff;}
+.mem-strip .b3{ flex:25; background:#7aa8c4; animation-delay:0.16s; }
+.mem-strip .b4{ flex:25; background:#4f89ab; animation-delay:0.24s; color:#fff;}
+.mem-strip .b5{ flex:15; background:#2c5f7f; animation-delay:0.32s; color:#fff;}
+.mem-strip-labels{ display:flex; justify-content:space-between; font-family:'IBM Plex Mono',monospace; font-size:0.76rem; color:#8fb2c8; }
+
+/* sections */
+.section{ padding:56px 0 8px; border-top:1px solid rgba(30,74,110,0.12); }
+.section:first-of-type{ border-top:none; }
+.eyebrow-num{
+  font-family:'IBM Plex Mono', monospace; color:var(--copper-600);
+  font-size:0.85rem; margin-bottom:6px; display:block;
+}
+.section h2{ font-size:1.7rem; margin-bottom:0.3em; }
+.section h3{ font-size:1.22rem; margin-top:2em; color:var(--navy-900); }
+.section h4{ font-size:1.02rem; margin-top:1.4em; color:var(--copper-700);}
+.section-intro{ font-size:1.03rem; color:var(--ink-700); }
+
+/* callouts */
+.callout{
+  border-left:3px solid var(--copper-600);
+  background:var(--amber-200); background:linear-gradient(90deg, rgba(224,162,74,0.14), rgba(224,162,74,0.03));
+  padding:14px 18px; border-radius:0 var(--radius-s) var(--radius-s) 0;
+  margin:1.4em 0; max-width:var(--serif-line);
+}
+.callout.warn{ border-left-color:var(--bad); background:linear-gradient(90deg, rgba(163,70,50,0.1), rgba(163,70,50,0.02)); }
+.callout.info{ border-left-color:var(--blue-line); background:linear-gradient(90deg, rgba(62,124,166,0.1), rgba(62,124,166,0.02)); }
+.callout p:last-child{ margin-bottom:0; }
+.callout-label{ font-weight:600; color:var(--copper-700); display:block; margin-bottom:4px; font-size:0.92rem;}
+.callout.warn .callout-label{ color:var(--bad); }
+.callout.info .callout-label{ color:var(--blue-line); }
+
+/* code blocks */
+.code-block{
+  background:var(--code-navy); color:var(--code-cyan);
+  border-radius:var(--radius-m); padding:16px 18px;
+  font-family:'IBM Plex Mono', monospace; font-size:0.87rem;
+  overflow-x:auto; margin:1.2em 0; line-height:1.6;
+  border:1px solid var(--navy-700);
+  white-space:pre; max-width:100%;
+}
+.code-block .c{ color:#7fa3b8; } /* comment */
+.code-block .k{ color:var(--code-amber); } /* keyword-ish */
+.code-block .n{ color:var(--code-green); } /* number/addr */
+.code-title{
+  font-family:'IBM Plex Mono', monospace; font-size:0.75rem; color:var(--ink-500);
+  margin:1.2em 0 -0.6em; text-transform:none;
+}
+
+/* tables */
+table{ border-collapse:collapse; width:100%; margin:1.2em 0; font-size:0.92rem; }
+th,td{ border:1px solid rgba(30,74,110,0.2); padding:9px 12px; text-align:left; vertical-align:top; }
+th{ background:var(--navy-900); color:#fff; font-family:'Space Grotesk',sans-serif; font-weight:600; font-size:0.85rem;}
+tr:nth-child(even) td{ background:rgba(30,74,110,0.04); }
+td code{ font-size:0.85rem; }
+
+/* cards / grids */
+.grid-2{ display:grid; grid-template-columns:1fr 1fr; gap:18px; }
+.grid-3{ display:grid; grid-template-columns:repeat(3,1fr); gap:14px; }
+.card{
+  background:var(--paper-raised); border:1px solid rgba(30,74,110,0.16);
+  border-radius:var(--radius-m); padding:18px 20px;
+  box-shadow:0 1px 0 rgba(15,40,60,0.03);
+}
+.card h4{ margin-top:0; }
+.lo-card{
+  border-top:3px solid var(--copper-600);
+}
+.lo-card .lo-tag{ font-family:'IBM Plex Mono',monospace; font-size:0.75rem; color:var(--copper-700); }
+
+/* widget shell */
+.widget{
+  background:var(--paper-raised);
+  border:1px solid rgba(30,74,110,0.18);
+  border-radius:var(--radius-m);
+  padding:22px 24px;
+  margin:1.6em 0;
+  box-shadow:0 2px 10px rgba(15,40,60,0.05);
+}
+.widget-label{
+  display:inline-flex; align-items:center; gap:6px;
+  font-family:'IBM Plex Mono',monospace; font-size:0.72rem;
+  color:#fff; background:var(--navy-900);
+  padding:3px 10px; border-radius:100px; margin-bottom:14px;
+}
+.widget h4{ margin-top:0; }
+.widget-controls{ display:flex; flex-wrap:wrap; gap:10px; align-items:center; margin:14px 0; }
+.field{ display:flex; flex-direction:column; gap:4px; }
+.field label{ font-size:0.76rem; color:var(--ink-500); }
+.field input{
+  font-family:'IBM Plex Mono',monospace; font-size:0.95rem;
+  border:1px solid rgba(30,74,110,0.3); border-radius:var(--radius-s);
+  padding:7px 10px; width:150px; background:#fff; color:var(--navy-900);
+}
+.field input:focus{ outline:2px solid var(--amber-400); outline-offset:1px; }
+.btn{
+  font-family:'IBM Plex Sans',sans-serif; font-weight:600; font-size:0.86rem;
+  background:var(--copper-600); color:#fff; border:none;
+  padding:9px 16px; border-radius:var(--radius-s); cursor:pointer;
+  transition:background 0.15s, transform 0.1s;
+}
+.btn:hover{ background:var(--copper-700); }
+.btn:active{ transform:translateY(1px); }
+.btn.ghost{
+  background:transparent; color:var(--navy-900); border:1px solid rgba(30,74,110,0.3);
+}
+.btn.ghost:hover{ background:rgba(30,74,110,0.06); }
+.result-line{
+  font-family:'IBM Plex Mono',monospace; font-size:1.02rem; color:var(--navy-900);
+  background:var(--grid-blue); border-radius:var(--radius-s); padding:12px 14px; margin-top:10px;
+}
+.result-line .arrow{ color:var(--copper-600); margin:0 8px; }
+.small-note{ font-size:0.82rem; color:var(--ink-500); margin-top:8px; }
+
+/* memory map explorer */
+.mm-explorer{ display:flex; gap:22px; align-items:stretch; flex-wrap:wrap; }
+.mm-stack{ display:flex; flex-direction:column; width:220px; border:1px solid var(--navy-800); border-radius:var(--radius-s); overflow:hidden; height:340px;}
+.mm-band{
+  border:none; text-align:left; padding:0 12px; color:#fff; font-family:'IBM Plex Sans',sans-serif;
+  font-size:0.82rem; font-weight:600; cursor:pointer; display:flex; align-items:center;
+  border-bottom:1px solid rgba(255,255,255,0.15); transition:filter 0.15s, flex 0.2s;
+}
+.mm-band:last-child{ border-bottom:none; }
+.mm-band:hover{ filter:brightness(1.12); }
+.mm-band.active{ filter:brightness(1.2); box-shadow:inset 0 0 0 2px var(--amber-400); }
+.mm-b5{ background:#2c5f7f; flex:15; }
+.mm-b4{ background:#4f89ab; flex:25; }
+.mm-b3{ background:#7aa8c4; flex:25; }
+.mm-b2{ background:#cc7a32; flex:20; }
+.mm-b1{ background:#e0a24a; flex:15; color:#402503;}
+.mm-addr-label{ font-family:'IBM Plex Mono',monospace; font-size:0.7rem; color:var(--ink-500); text-align:right; padding:2px 2px 0;}
+.mm-info{ flex:1; min-width:260px; background:var(--grid-blue); border-radius:var(--radius-s); padding:16px 18px; }
+.mm-info h5{ margin:0 0 6px; font-family:'Space Grotesk',sans-serif; color:var(--navy-900); font-size:1.02rem;}
+.mm-info .mm-range{ font-family:'IBM Plex Mono',monospace; font-size:0.78rem; color:var(--copper-700); margin-bottom:8px; display:block;}
+
+/* bit toggles */
+.bitrow{ display:flex; gap:6px; align-items:center; margin:8px 0; flex-wrap:wrap; }
+.bitrow .rowlabel{ width:64px; font-size:0.8rem; color:var(--ink-500); font-family:'IBM Plex Mono',monospace;}
+.bit{
+  width:34px; height:34px; border-radius:5px; border:1px solid rgba(30,74,110,0.3);
+  background:#fff; font-family:'IBM Plex Mono',monospace; font-weight:600; font-size:0.85rem;
+  display:flex; align-items:center; justify-content:center; cursor:pointer; color:var(--ink-700);
+  transition:background 0.12s,color 0.12s,transform 0.1s;
+}
+.bit:hover{ transform:translateY(-1px); }
+.bit.on{ background:var(--navy-900); color:#fff; border-color:var(--navy-900); }
+.bit.res{ background:repeating-linear-gradient(45deg,#eee,#eee 4px,#fafafa 4px,#fafafa 8px); cursor:not-allowed; color:#aaa;}
+.bit.locked{ opacity:0.55; cursor:not-allowed; }
+.bitgroup-idx{ font-size:0.65rem; color:var(--ink-500); text-align:center; width:34px; font-family:'IBM Plex Mono',monospace;}
+
+/* pin grid (MODER simulator) */
+.pin-grid{ display:grid; grid-template-columns:repeat(8,1fr); gap:8px; margin:16px 0; }
+.pin-btn{
+  border:1px solid rgba(30,74,110,0.3); border-radius:var(--radius-s);
+  background:#fff; padding:8px 4px; text-align:center; cursor:pointer;
+  font-family:'IBM Plex Mono',monospace; transition:background 0.15s, border-color 0.15s;
+}
+.pin-btn .pin-name{ font-size:0.72rem; color:var(--ink-500); display:block; }
+.pin-btn .pin-state{ font-size:0.78rem; font-weight:600; display:block; margin-top:3px;}
+.pin-btn.focused{ box-shadow:0 0 0 2px var(--amber-400); }
+.state-input{ background:#eef3f6; }
+.state-output{ background:#f6e3cf; }
+.state-alt{ background:#f0d9ae; }
+.state-analog{ background:#d9e9f0; }
+
+.reg-hex-display{
+  font-family:'IBM Plex Mono',monospace; background:var(--code-navy); color:var(--code-cyan);
+  border-radius:var(--radius-s); padding:14px 16px; margin:14px 0; font-size:0.95rem;
+  display:flex; flex-wrap:wrap; gap:14px; align-items:baseline;
+}
+.reg-hex-display .tag{ color:#7fa3b8; font-size:0.75rem; }
+
+/* flow / stepper */
+.flow-steps{ display:flex; gap:10px; flex-wrap:wrap; margin:18px 0 8px; }
+.flow-step-btn{
+  flex:1; min-width:130px; background:var(--paper-raised); border:1px solid rgba(30,74,110,0.25);
+  border-radius:var(--radius-s); padding:10px 12px; cursor:pointer; text-align:left;
+  transition:border-color 0.15s, background 0.15s;
+}
+.flow-step-btn .fs-num{ font-family:'IBM Plex Mono',monospace; color:var(--copper-600); font-size:0.72rem;}
+.flow-step-btn .fs-title{ font-weight:600; font-size:0.88rem; color:var(--navy-900); margin-top:2px;}
+.flow-step-btn.active{ border-color:var(--copper-600); background:rgba(204,122,50,0.08); }
+.flow-detail{ background:var(--grid-blue); border-radius:var(--radius-s); padding:16px 18px; min-height:70px; }
+.flow-detail h5{ margin:0 0 6px; color:var(--navy-900); }
+
+/* recipe steps */
+.recipe{ counter-reset:recipe; list-style:none; padding:0; }
+.recipe li{
+  counter-increment:recipe; position:relative; padding:6px 0 6px 46px; margin-bottom:14px; max-width:var(--serif-line);
+}
+.recipe li::before{
+  content:counter(recipe); position:absolute; left:0; top:2px;
+  width:32px; height:32px; border-radius:50%; background:var(--navy-900); color:#fff;
+  display:flex; align-items:center; justify-content:center; font-family:'Space Grotesk',sans-serif; font-weight:700; font-size:0.9rem;
+}
+
+/* LED demo */
+.led-demo{ display:flex; gap:36px; align-items:center; flex-wrap:wrap; }
+.led-visual{ display:flex; flex-direction:column; align-items:center; gap:10px; }
+.led-bulb{
+  width:60px; height:60px; border-radius:50%; background:radial-gradient(circle at 35% 30%, #ffe6b0, #7a4a10 85%);
+  border:3px solid #5a3a10; box-shadow:0 0 6px 2px rgba(0,0,0,0.15) inset;
+  transition:background 0.2s, box-shadow 0.2s;
+}
+.led-bulb.on{
+  background:radial-gradient(circle at 35% 30%, #fff6d8, #e0a24a 70%);
+  box-shadow:0 0 26px 10px rgba(224,162,74,0.75);
+}
+.led-caption{ font-size:0.8rem; color:var(--ink-500); font-family:'IBM Plex Mono',monospace; text-align:center;}
+.button-visual{
+  width:74px; height:74px; border-radius:12px; background:#dfe6ea; border:2px solid #b9c6cd;
+  display:flex; align-items:center; justify-content:center; cursor:pointer; user-select:none;
+  font-family:'IBM Plex Mono',monospace; font-size:0.72rem; color:var(--ink-700); text-align:center;
+  transition:transform 0.08s, background 0.1s;
+}
+.button-visual:active, .button-visual.pressed{ transform:translateY(2px); background:#c7d2d8; }
+.led-status{ font-family:'IBM Plex Mono',monospace; font-size:0.85rem; background:var(--grid-blue); border-radius:var(--radius-s); padding:12px 14px; flex:1; min-width:260px;}
+.led-status div{ margin-bottom:4px; }
+
+/* glossary */
+.glossary-grid{ display:grid; grid-template-columns:repeat(2,1fr); gap:14px; margin:1.2em 0; }
+.flip-card{ perspective:1000px; height:118px; cursor:pointer; }
+.flip-inner{
+  position:relative; width:100%; height:100%; transition:transform 0.5s;
+  transform-style:preserve-3d;
+}
+.flip-card.flipped .flip-inner{ transform:rotateY(180deg); }
+.flip-face{
+  position:absolute; inset:0; backface-visibility:hidden;
+  border-radius:var(--radius-m); padding:14px 16px; border:1px solid rgba(30,74,110,0.2);
+  display:flex; flex-direction:column; justify-content:center;
+}
+.flip-front{ background:var(--paper-raised); }
+.flip-front .term{ font-family:'Space Grotesk',sans-serif; font-weight:600; color:var(--navy-900); font-size:1.02rem;}
+.flip-front .tap-hint{ font-size:0.72rem; color:var(--ink-500); margin-top:6px;}
+.flip-back{ background:var(--navy-900); color:#dbe9f2; transform:rotateY(180deg); font-size:0.85rem; }
+
+/* quiz */
+.quiz-q{ margin-bottom:26px; padding-bottom:22px; border-bottom:1px solid rgba(30,74,110,0.14);}
+.quiz-q:last-child{ border-bottom:none; }
+.quiz-prompt{ font-weight:600; color:var(--navy-900); margin-bottom:10px; }
+.quiz-opt{
+  display:block; width:100%; text-align:left; background:var(--paper-raised);
+  border:1px solid rgba(30,74,110,0.25); border-radius:var(--radius-s);
+  padding:10px 14px; margin-bottom:8px; cursor:pointer; font-family:'IBM Plex Sans',sans-serif; font-size:0.94rem;
+  transition:background 0.12s, border-color 0.12s;
+}
+.quiz-opt:hover{ background:rgba(30,74,110,0.05); }
+.quiz-opt.correct{ background:rgba(63,125,85,0.14); border-color:var(--good); }
+.quiz-opt.wrong{ background:rgba(163,70,50,0.12); border-color:var(--bad); }
+.quiz-opt.disabled{ pointer-events:none; }
+.quiz-feedback{ font-size:0.86rem; margin-top:6px; padding:8px 12px; border-radius:var(--radius-s); }
+.quiz-feedback.good{ background:rgba(63,125,85,0.12); color:var(--good); }
+.quiz-feedback.bad{ background:rgba(163,70,50,0.1); color:var(--bad); }
+#quiz-score{ font-family:'Space Grotesk',sans-serif; font-size:1.2rem; margin-top:10px; }
+
+/* footer */
+footer{
+  padding:30px 28px 50px; text-align:center; color:var(--ink-500); font-size:0.82rem;
+  border-top:1px solid rgba(30,74,110,0.14); margin-top:30px;
+}
+
+/* responsive */
+@media (max-width: 900px){
+  .layout{ grid-template-columns:1fr; }
+  .sidebar{
+    position:fixed; z-index:400; left:0; top:0; width:78vw; max-width:300px;
+    transform:translateX(-100%); transition:transform 0.25s; box-shadow:4px 0 20px rgba(0,0,0,0.3);
+  }
+  .sidebar.open{ transform:translateX(0); }
+  .menu-toggle{
+    display:flex; position:fixed; top:14px; left:14px; z-index:410;
+    width:42px; height:42px; border-radius:50%; background:var(--navy-900); color:#fff;
+    align-items:center; justify-content:center; border:none; cursor:pointer; font-size:1.1rem;
+    box-shadow:0 2px 8px rgba(0,0,0,0.3);
+  }
+  .hero{ padding-top:80px; }
+  .grid-2, .grid-3, .glossary-grid{ grid-template-columns:1fr; }
+  .mm-explorer{ flex-direction:column; }
+  .mm-stack{ width:100%; }
+  .pin-grid{ grid-template-columns:repeat(4,1fr); }
+  .led-demo{ flex-direction:column; align-items:flex-start; }
+}
+@media (prefers-reduced-motion: reduce){
+  *{ animation-duration:0.01ms !important; transition-duration:0.01ms !important; scroll-behavior:auto !important;}
+}
+</style>
+</head>
+<body>
+
+<div id="progress"></div>
+<button class="menu-toggle" id="menuToggle" aria-label="Toggle navigation">☰</button>
+
+<div class="layout">
+  <nav class="sidebar" id="sidebar">
+    <div class="sidebar-brand">ENGE X200</div>
+    <div class="sidebar-sub">Lecture 2 study notes</div>
+    <ul class="toc">
+      <li><a href="#lo">Learning outcomes</a></li>
+      <li class="toc-group-label">Part 1</li>
+      <li><a href="#part1">The big picture</a></li>
+      <li class="toc-group-label">Part 2</li>
+      <li><a href="#part2">The memory map</a></li>
+      <li class="toc-group-label">Part 3</li>
+      <li><a href="#part3">Using the reference manual</a></li>
+      <li class="toc-group-label">Part 4</li>
+      <li><a href="#part4">GPIO registers</a></li>
+      <li class="toc-group-label">Part 5</li>
+      <li><a href="#part5">Putting it together</a></li>
+      <li class="toc-group-label">Part 6</li>
+      <li><a href="#part6">Writing embedded code</a></li>
+      <li class="toc-group-label">Part 7</li>
+      <li><a href="#part7">CMSIS</a></li>
+      <li class="toc-group-label">Wrap-up</li>
+      <li><a href="#summary">Summary</a></li>
+      <li><a href="#glossary">Glossary</a></li>
+      <li><a href="#quiz">Self-check quiz</a></li>
+    </ul>
+  </nav>
+
+  <main>
+    <header class="hero">
+      <div class="hero-inner">
+        <span class="hero-chip">Lecture 2 · ENGE X200 Microcontroller Programming</span>
+        <h1>Memory Maps, Reference Manuals &amp; Registers</h1>
+        <p class="lede">Every microcontroller is really just a giant, numbered grid of storage boxes. Once you can read the map and look up what's in each box, you can control any pin, timer or peripheral on the chip.</p>
+        <p class="hero-course">Study notes rebuilt from the lecture slides, written for someone starting from zero.</p>
+        <div class="mem-strip" aria-hidden="true">
+          <div class="b1">Boot</div>
+          <div class="b2">Flash</div>
+          <div class="b3">RAM</div>
+          <div class="b4">Peripherals</div>
+          <div class="b5">ARM core</div>
+        </div>
+        <div class="mem-strip-labels"><span>0x0000 0000</span><span>0xFFFF FFFF</span></div>
+      </div>
+    </header>
+
+    <div class="content-inner">
+
+      <!-- LEARNING OUTCOMES -->
+      <section class="section" id="lo">
+        <h2>What you should walk away with</h2>
+        <p class="section-intro">Three things. Everything below exists to build toward these.</p>
+        <div class="grid-3">
+          <div class="card lo-card"><span class="lo-tag">LO1</span><h4>Read a memory map</h4><p style="margin-bottom:0">Understand how a microcontroller organises its 4&nbsp;billion possible addresses into flash, RAM, and peripheral regions.</p></div>
+          <div class="card lo-card"><span class="lo-tag">LO2</span><h4>Use a reference manual</h4><p style="margin-bottom:0">Find any register on any chip by combining a base address with an offset — without memorising a single address.</p></div>
+          <div class="card lo-card"><span class="lo-tag">LO3</span><h4>Set GPIO registers</h4><p style="margin-bottom:0">Actually control a pin on an STM32 board, two ways: raw pointer addressing, and the friendlier CMSIS layer.</p></div>
+        </div>
+      </section>
+
+      <!-- PART 1 -->
+      <section class="section" id="part1">
+        <span class="eyebrow-num">Part 1</span>
+        <h2>The big picture</h2>
+        <p class="section-intro">Before we touch a single register, it helps to know what a microcontroller physically is and how its pieces talk to each other.</p>
+
+        <h3>1.1 &nbsp;What actually is a microcontroller?</h3>
+        <p>Think of a laptop: a CPU, memory, and storage, but as three separate chips wired together on a big motherboard, plus a fan, a screen, a battery... A <strong>microcontroller</strong> squashes the essentials of that — a processor, some memory, and connections to the outside world — onto a single, tiny chip. No operating system, no screen, nothing decorative. Just enough to run one program and talk to real-world hardware: LEDs, motors, sensors, buttons.</p>
+        <p>This course uses two specific boards, both built around STMicroelectronics chips (the "STM32" family):</p>
+        <table>
+          <tr><th></th><th>Wokwi simulator board</th><th>Hardware practical board</th></tr>
+          <tr><td>Board</td><td>Nucleo C031C6</td><td>Nucleo G474RE</td></tr>
+          <tr><td>Chip family</td><td>STM32C0</td><td>STM32G4</td></tr>
+          <tr><td>Processor core</td><td>32-bit Arm Cortex-M0+</td><td>32-bit Arm Cortex-M4</td></tr>
+          <tr><td>Top clock speed</td><td>48 MHz</td><td>170 MHz</td></tr>
+          <tr><td>Flash memory</td><td>32 KB</td><td>512 KB</td></tr>
+          <tr><td>RAM (SRAM)</td><td>12 KB</td><td>128 KB</td></tr>
+          <tr><td>Approx. price</td><td>$28</td><td>$28</td></tr>
+        </table>
+        <p class="small-note">"Cortex-M0+" and "Cortex-M4" are Arm's processor designs — M0+ is the smallest and simplest, M4 is faster and can do more advanced maths (useful for signal processing). Everything you learn about addressing and registers here applies to both, and to essentially every Arm Cortex-M chip on the market.</p>
+
+        <h3>1.2 &nbsp;System architecture: a highway with numbered exits</h3>
+        <p>The Arm Cortex-M core is the <em>brain</em> of the chip — it's the only part that actually executes your code. But the brain is useless on its own; it needs to read your program out of memory, store variables somewhere, and flip pins on and off. All of that traffic — CPU to memory, CPU to GPIO pins, CPU to timers — travels along an internal <strong>bus matrix</strong>: essentially a highway system connecting the CPU to every other block on the chip.</p>
+        <p>Every block sitting on that highway is reached by driving to a specific <strong>address</strong>, the same way you'd drive to a specific street number. That's the entire idea behind a memory map, and it's why the next section matters so much.</p>
+        <div class="callout info">
+          <span class="callout-label">Good to know</span>
+          <p>Most peripherals — timers, I2C, SPI, UART, the ADC — are switched <strong>off by default</strong> when the chip powers up, to save energy. Before you can use one, you need to enable its clock signal through a block called the RCC (Reset and Control Clock). More on that in Part 3.</p>
+        </div>
+
+        <div class="grid-2" style="margin-top:1.6em;">
+          <div class="card"><h4>The CPU</h4><p style="margin-bottom:0">Executes your compiled code, instruction by instruction. It cannot "see" hardware directly — it only knows how to read and write numbers at addresses.</p></div>
+          <div class="card"><h4>The bus matrix</h4><p style="margin-bottom:0">The internal highway. It looks at the address the CPU is asking for and physically routes the request to the correct block — flash, RAM, or a peripheral.</p></div>
+        </div>
+      </section>
+
+      <!-- PART 2 -->
+      <section class="section" id="part2">
+        <span class="eyebrow-num">Part 2</span>
+        <h2>The memory map</h2>
+        <p class="section-intro">This is the heart of LO1: how the chip's entire address space is carved up, and what lives where.</p>
+
+        <h3>2.1 &nbsp;A 30-second hex refresher</h3>
+        <p>Addresses are written in <strong>hexadecimal</strong> (base 16), flagged with a <code>0x</code> prefix — for example <code>0x4002 1034</code>. Hex exists purely for convenience: computers work in binary, but a 32-bit binary number is long and easy to misread, while its hex form is short and tidy.</p>
+        <p>Each hex digit represents exactly 4 bits (a <strong>nibble</strong>), so 8 hex digits represent all 32 bits of an address:</p>
+        <div class="code-block">0x <span class="n">4  0  0  2  1  0  3  4</span>
+   <span class="c">0100 0000 0000 0010 0001 0000 0011 0100</span>  ← 32 bits, one nibble at a time</div>
+        <p>With 32 bits, the number of unique addresses the CPU can reach is 2<sup>32</sup> = 4,294,967,296 — exactly 4&nbsp;GB. That range runs from <code>0x0000 0000</code> up to <code>0xFFFF FFFF</code>, and it's called the chip's <strong>address space</strong>. One more fact you'll use constantly: <strong>each individual address holds exactly one byte (8 bits)</strong>.</p>
+
+        <h3>2.2 &nbsp;Explore the address space</h3>
+        <p>Arm splits that 4 GB range into five broad regions. Click each band below (bottom = lowest address, top = highest):</p>
+        <div class="widget">
+          <span class="widget-label">Interactive · memory map</span>
+          <div class="mm-explorer">
+            <div>
+              <div class="mm-addr-label">0xFFFF FFFF</div>
+              <div class="mm-stack" role="group" aria-label="Memory map regions">
+                <button class="mm-band mm-b5" data-key="core">ARM core peripherals</button>
+                <button class="mm-band mm-b4" data-key="periph">Peripheral registers</button>
+                <button class="mm-band mm-b3" data-key="ram">RAM</button>
+                <button class="mm-band mm-b2" data-key="flash">Flash memory</button>
+                <button class="mm-band mm-b1" data-key="boot">Boot space</button>
+              </div>
+              <div class="mm-addr-label" style="text-align:left;">0x0000 0000</div>
+            </div>
+            <div class="mm-info" id="mmInfo">
+              <span class="mm-range">Click a band</span>
+              <h5>What's in each region?</h5>
+              <p style="margin-bottom:0">Boot space sits at the very bottom because it's the very first thing the processor looks at when it powers on.</p>
+            </div>
+          </div>
+        </div>
+
+        <h3>2.3 &nbsp;The STM32C0's real memory map</h3>
+        <p>Zooming into the actual chip used in Wokwi: its reference manual (<strong>RM0490</strong>) lays out these real address ranges:</p>
+        <table>
+          <tr><th>Region</th><th>Address range</th></tr>
+          <tr><td>Main flash memory</td><td><code>0x0800 0000</code> – <code>0x0800 8000</code></td></tr>
+          <tr><td>RAM (SRAM)</td><td>starts at <code>0x2000 0000</code></td></tr>
+          <tr><td>Peripherals (Timers, SPI, I2C, UART...)</td><td><code>0x4000 0000</code> – <code>0x4FFF FFFF</code></td></tr>
+          <tr><td>RCC (on the AHB bus)</td><td><code>0x4002 1000</code> – <code>0x4002 13FF</code></td></tr>
+          <tr><td>IOPORT (GPIO pins)</td><td>from <code>0x5000 0000</code></td></tr>
+        </table>
+        <p>Here's the trick the slides use to work out how big the flash memory actually is, just from those two boundary addresses:</p>
+        <div class="widget">
+          <span class="widget-label">Interactive · size calculator</span>
+          <h4>How many bytes is that?</h4>
+          <p>Since every address holds one byte, subtracting the start address from the end address tells you exactly how many bytes fit in between.</p>
+          <div class="widget-controls">
+            <div class="field"><label for="szStart">Start address</label><input id="szStart" type="text" value="0x08000000"></div>
+            <div class="field"><label for="szEnd">End address</label><input id="szEnd" type="text" value="0x08008000"></div>
+            <button class="btn" onclick="calcSize()">Calculate</button>
+            <button class="btn ghost" onclick="loadG4()">Try the G4's flash range</button>
+          </div>
+          <div class="result-line" id="szResult"></div>
+          <p class="small-note">1 kilobyte (KB) = 1,024 bytes — not 1,000. That's why 32,768 bytes comes out to a clean 32 KB.</p>
+        </div>
+
+        <h3>2.4 &nbsp;C0 vs G4, side by side</h3>
+        <p>The G4 (used in the hardware practicals) is a noticeably bigger chip. Its reference manual is <strong>RM0440</strong>. Same idea, bigger numbers:</p>
+        <table>
+          <tr><th></th><th>STM32C0</th><th>STM32G4</th></tr>
+          <tr><td>Flash range</td><td><code>0x0800 0000</code>–<code>0x0800 8000</code></td><td><code>0x0800 0000</code>–<code>0x0808 0000</code></td></tr>
+          <tr><td>Flash size</td><td>0x8000 = 32,768 B = 32 KB</td><td>0x80000 = 524,288 B = 512 KB</td></tr>
+          <tr><td>Extra features</td><td>—</td><td>Faster ADCs/timers; split RAM (one peripheral can read while another writes, at the same time)</td></tr>
+        </table>
+
+        <h3>2.5 &nbsp;So what does "programming a microcontroller" actually mean?</h3>
+        <p>Underneath every library and abstraction, it comes down to one idea: <strong>writing numbers to specific addresses</strong>. Special hardware called the <strong>address decoder</strong> watches which address you're writing to and automatically routes your data to the right place — RAM, a GPIO pin, or an internal Arm feature. You never manually pick "RAM" or "GPIO"; the address itself decides.</p>
+        <div class="code-title">Three raw examples from the lecture</div>
+        <div class="code-block"><span class="c">// Setting a variable in RAM to 99</span>
+*((<span class="k">volatile uint32_t</span>*)<span class="n">0x20000010</span>) = 99;
+
+<span class="c">// Setting a pin in IOPORT (GPIO) high</span>
+*((<span class="k">volatile uint32_t</span>*)<span class="n">0x50000014</span>) |= (1&lt;&lt;5);
+
+<span class="c">// Setting an ARM core peripheral high</span>
+*((<span class="k">volatile uint32_t</span>*)<span class="n">0xE000E010</span>) |= 0x1;</div>
+        <p>If you've never seen C before, that first line looks like a small wall of punctuation. Let's take it apart piece by piece, because this exact pattern shows up constantly from here on:</p>
+        <table>
+          <tr><th>Piece</th><th>What it means</th></tr>
+          <tr><td><code>0x20000010</code></td><td>The raw address we want to write to — a plain number.</td></tr>
+          <tr><td><code>(uint32_t*)</code></td><td>"Treat that number as a <em>pointer</em> to a 32-bit unsigned integer." A pointer is just a variable whose value is an address, rather than an ordinary number.</td></tr>
+          <tr><td><code>volatile</code></td><td>Tells the compiler "don't get clever with this — hardware might change this value on its own, so read/write it for real, every single time, and don't cache or optimise it away." Essential for anything touching hardware registers.</td></tr>
+          <tr><td><code>*( ... )</code></td><td>The <em>dereference</em> operator: "go to the address this pointer holds, and give me what's actually stored there" (or, for a write, "store this value there").</td></tr>
+          <tr><td><code>= 99</code></td><td>Write the value 99 into that address.</td></tr>
+        </table>
+        <p>The second example uses <code>|=</code> and <code>&lt;&lt;</code> instead of a plain <code>=</code> — that's because registers are usually packed with many independent on/off switches (bits), and you want to flip just one without disturbing the others. We'll unpack bitwise operators properly in Part 4, once GPIO gives us a concrete reason to care.</p>
+        <div class="callout">
+          <span class="callout-label">The obvious question</span>
+          <p>The slides ask it directly: does that mean you need to memorise every single hex address on the chip? <strong>No.</strong> That's precisely what the reference manual (Part 3) and the CMSIS library (Part 7) exist to save you from.</p>
+        </div>
+      </section>
+
+      <!-- PART 3 -->
+      <section class="section" id="part3">
+        <span class="eyebrow-num">Part 3</span>
+        <h2>Using the reference manual</h2>
+        <p class="section-intro">LO2 lives here: turning a 1,000-page PDF into the one address you actually need.</p>
+
+        <h3>3.1 &nbsp;What is a reference manual?</h3>
+        <p>Every microcontroller ships with a <strong>reference manual</strong>: an exhaustive, chip-specific document listing every peripheral, every register, its address, and exactly what each individual bit does. For the STM32C0 used in this course, that's <strong>RM0490</strong> — and yes, it really is over a thousand pages. The lecture slide jokes that you "must memorise it all." You don't. Nobody does. You learn the <em>lookup process</em> once, and use the PDF's search and bookmarks every time after that.</p>
+
+        <h3>3.2 &nbsp;Worked example: turning on the clock for GPIO</h3>
+        <p>Digital circuits are built from logic gates that only move data on a rhythmic electrical pulse — think of it like a metronome keeping every gate in sync. That pulse comes from the <strong>RCC</strong> (Reset and Control Clock). GPIO pins are wired straight to the processor, but by default their clock is switched off to save power, so step zero for almost anything on this chip is: go enable the right clock in the RCC.</p>
+        <p>Here's the exact path the lecture walks through RM0490 to find that one bit:</p>
+        <ol class="recipe">
+          <li><strong>Find the address range.</strong> Table 7 (RM0490, pages 49–51) lists the address range for every bus and peripheral on the chip. RCC sits on the AHB bus, at <code>0x4002 1000</code>–<code>0x4002 13FF</code>. That first number, <code>0x4002 1000</code>, is RCC's <strong>base address</strong>.</li>
+          <li><strong>Find the specific register.</strong> Flip to RCC's own chapter (page 163) and open its register map — Table 31, on page 164. Scanning down for "enable GPIO clock" turns up a register called <code>RCC_IOPENR</code>, sitting at <strong>offset</strong> <code>0x34</code> from the base.</li>
+          <li><strong>Add them together.</strong> Register address = base address + offset = <code>0x4002 1000</code> + <code>0x34</code> = <code>0x4002 1034</code>.</li>
+          <li><strong>Read the bit layout.</strong> The register map shows <code>RCC_IOPENR</code>'s 32 bits. Five of them matter here — bit 0 through bit 4 enable the clock for GPIO ports A through F (skipping E, which this chip doesn't have): all default to 0 (off).</li>
+        </ol>
+        <table>
+          <tr><th>Bit</th><th>0</th><th>1</th><th>2</th><th>3</th><th>4</th></tr>
+          <tr><td>Enables</td><td>GPIOA</td><td>GPIOB</td><td>GPIOC</td><td>GPIOD</td><td>GPIOF</td></tr>
+        </table>
+        <div class="code-block"><span class="c">// Enable clock for GPIOA (set bit 0 of RCC_IOPENR)</span>
+*((<span class="k">volatile uint32_t</span>*)<span class="n">0x40021034</span>) |= (1&lt;&lt;0);</div>
+
+        <div class="widget">
+          <span class="widget-label">Interactive · address calculator</span>
+          <h4>Base address + offset = register address</h4>
+          <p>This is the calculation you'll repeat for literally every register on any Arm microcontroller. Try changing the offset to <code>0x00</code> — that's <code>RCC_CR</code>, the very first register in the RCC block.</p>
+          <div class="widget-controls">
+            <div class="field"><label for="baseAddr">Base address</label><input id="baseAddr" type="text" value="0x40021000"></div>
+            <div class="field"><label for="offAddr">Offset</label><input id="offAddr" type="text" value="0x34"></div>
+            <button class="btn" onclick="calcAddr()">Add them</button>
+          </div>
+          <div class="result-line" id="addrResult"></div>
+        </div>
+
+        <h3>3.3 &nbsp;The general recipe (works on any chip, any peripheral)</h3>
+        <p>Strip away the RCC specifics and you're left with a four-step recipe that applies everywhere:</p>
+        <ol class="recipe">
+          <li>Look up the peripheral's address range and register-map location in the manual's summary table (for RM0490, that's Table 7).</li>
+          <li>Note its <strong>base address</strong>.</li>
+          <li>Find the <strong>specific register</strong> you need — by name if you already know it, or by browsing the PDF's bookmarks if you don't — and read off its <strong>offset</strong>. <code>Register address = Base + Offset</code>.</li>
+          <li>Check that register's bit layout to see which bits you can read or write, then set, clear, toggle or test exactly the bits you need.</li>
+        </ol>
+        <div class="callout">
+          <span class="callout-label">Why this matters</span>
+          <p>Learn this recipe once and it transfers to every peripheral on every Arm Cortex-M chip you'll ever meet — not just GPIO, not just this course.</p>
+        </div>
+      </section>
+
+      <!-- PART 4 -->
+      <section class="section" id="part4">
+        <span class="eyebrow-num">Part 4</span>
+        <h2>GPIO registers</h2>
+        <p class="section-intro">Now we apply the recipe to the pins you'll actually wire LEDs and buttons to.</p>
+
+        <h3>4.1 &nbsp;What is GPIO?</h3>
+        <p><strong>GPIO</strong> stands for General Purpose Input/Output — the physical pins on the board where you connect real hardware: LEDs, buttons, sensors, motor drivers. They're wired directly to the processor, which keeps the delay between "code runs" and "voltage changes" as small as possible. The STM32C0 groups its pins into five ports: <strong>A, B, C, D, F</strong>.</p>
+        <p>Pins are named with the convention <strong>P</strong>xy, meaning Port x, pin y. For example, <strong>PC13</strong> means GPIO Port C, bit/pin 13. On the Nucleo board's user manual (<strong>UM2953</strong>, for the MB1717 reference board), you can trace every physical header pin back to its Pxy name.</p>
+
+        <h3>4.2 &nbsp;The five registers that matter here</h3>
+        <p>RM0490's GPIO chapter (Chapter 8, pages 178–195) applies identically to every port — the manual just writes <code>GPIOx</code> and lets x stand for A, B, C, D or F. Taking GPIO Port A's base address (<code>0x5000 0000</code>) and adding the offsets from that chapter gives:</p>
+        <table>
+          <tr><th>Register</th><th>Offset</th><th>Address (Port A)</th><th>Job</th></tr>
+          <tr><td><code>GPIOA_MODER</code></td><td><code>0x00</code></td><td><code>0x5000 0000</code></td><td>Sets each pin's overall mode</td></tr>
+          <tr><td><code>GPIOA_OTYPER</code></td><td><code>0x04</code></td><td><code>0x5000 0004</code></td><td>Output style: push-pull or open-drain</td></tr>
+          <tr><td><code>GPIOA_PUPDR</code></td><td><code>0x0C</code></td><td><code>0x5000 000C</code></td><td>Internal pull-up/pull-down resistors</td></tr>
+          <tr><td><code>GPIOA_IDR</code></td><td><code>0x10</code></td><td><code>0x5000 0010</code></td><td>Read the current pin state (input)</td></tr>
+          <tr><td><code>GPIOA_ODR</code></td><td><code>0x14</code></td><td><code>0x5000 0014</code></td><td>Set the pin state (output)</td></tr>
+        </table>
+        <p class="small-note">Same base address, five different offsets — exactly the recipe from Part 3.</p>
+
+        <h3>4.3 &nbsp;A quick bitwise-operator primer</h3>
+        <p>Registers are 32 independent on/off switches packed into one number. To flip one switch without disturbing the other 31, C code leans on three operators. Try them below on a small 4-bit example before we scale up to a real 32-bit register:</p>
+        <div class="widget">
+          <span class="widget-label">Interactive · bitwise playground</span>
+          <h4>Value, mask, and an operator</h4>
+          <div class="bitrow">
+            <span class="rowlabel">Value</span>
+            <button class="bit" data-row="val" data-i="3">0</button>
+            <button class="bit" data-row="val" data-i="2">0</button>
+            <button class="bit" data-row="val" data-i="1">0</button>
+            <button class="bit" data-row="val" data-i="0">0</button>
+          </div>
+          <div class="bitrow">
+            <span class="rowlabel">Mask</span>
+            <button class="bit" data-row="mask" data-i="3">0</button>
+            <button class="bit" data-row="mask" data-i="2">0</button>
+            <button class="bit" data-row="mask" data-i="1">0</button>
+            <button class="bit" data-row="mask" data-i="0">0</button>
+          </div>
+          <div class="widget-controls">
+            <button class="btn" onclick="bitOp('and')">Value &amp; Mask (AND)</button>
+            <button class="btn" onclick="bitOp('or')">Value | Mask (OR)</button>
+            <button class="btn" onclick="bitOp('notmask')">~Mask (NOT)</button>
+            <button class="btn ghost" onclick="bitOp('xor')">Value ^ Mask (XOR)</button>
+          </div>
+          <div class="bitrow">
+            <span class="rowlabel">Result</span>
+            <span class="bit" id="res3" style="cursor:default;">–</span>
+            <span class="bit" id="res2" style="cursor:default;">–</span>
+            <span class="bit" id="res1" style="cursor:default;">–</span>
+            <span class="bit" id="res0" style="cursor:default;">–</span>
+          </div>
+          <p class="result-line" id="bitExplain">Click the Value and Mask bits to toggle them, then try an operator.</p>
+        </div>
+        <table>
+          <tr><th>Operator</th><th>Used as</th><th>Effect on a register</th></tr>
+          <tr><td>AND, <code>&amp;</code></td><td><code>reg &amp;= ~mask;</code></td><td><strong>Clears</strong> bits — anywhere the mask is 0, the result is forced to 0.</td></tr>
+          <tr><td>OR, <code>|</code></td><td><code>reg |= mask;</code></td><td><strong>Sets</strong> bits — anywhere the mask is 1, the result is forced to 1, others untouched.</td></tr>
+          <tr><td>NOT, <code>~</code></td><td><code>~mask</code></td><td>Flips every bit — turns "these are the bits I want" into "these are the bits I want to keep".</td></tr>
+          <tr><td>Left shift, <code>&lt;&lt;</code></td><td><code>1 &lt;&lt; 5</code></td><td>Slides a 1 into bit position 5, giving binary <code>...0010 0000</code>. This is how you build a mask for "bit N" without counting zeros by hand.</td></tr>
+        </table>
+        <p>The standard pattern for "set pin N's two-bit field to some value" is therefore always two lines: clear the field, then OR in the new value:</p>
+        <div class="code-block">reg &amp;= ~(<span class="k">0b11</span> &lt;&lt; (N*2));   <span class="c">// clear both bits of the field first</span>
+reg |=  (<span class="k">value</span> &lt;&lt; (N*2));   <span class="c">// then set only the bits you want</span></div>
+
+        <h3>4.4 &nbsp;GPIOx_MODER — choosing what a pin does</h3>
+        <p>Each GPIO port has 16 pins, and <code>MODER</code> gives every single one of them 2 bits of its own — using up the full 32-bit register. The 2-bit value means one of four modes:</p>
+        <table>
+          <tr><th>Bits</th><th>Mode</th><th>What it does</th></tr>
+          <tr><td><code>00</code></td><td>Input</td><td>Default for most pins. Reads a digital voltage in as a 0 or 1.</td></tr>
+          <tr><td><code>01</code></td><td>General purpose output</td><td>Lets code drive the pin's voltage — e.g. lighting an LED.</td></tr>
+          <tr><td><code>10</code></td><td>Alternate function</td><td>Hands the pin to a special peripheral — a timer, SPI, UART, etc.</td></tr>
+          <tr><td><code>11</code></td><td>Analog</td><td>Puts the pin into analog-to-digital (ADC) mode to read a raw voltage level rather than just 0/1.</td></tr>
+        </table>
+        <p>Try it yourself below. Click any pin to cycle through its mode, and watch the live register value and generated code update for whichever pin you touched last.</p>
+        <div class="widget">
+          <span class="widget-label">Interactive · GPIOx_MODER simulator</span>
+          <h4>Port A, pins 0–15</h4>
+          <div class="pin-grid" id="pinGrid"></div>
+          <div class="widget-controls">
+            <button class="btn ghost" onclick="loadLedExample()">Load the LED example (pin 5 → output)</button>
+            <button class="btn ghost" onclick="resetPins()">Reset all to input</button>
+          </div>
+          <div class="reg-hex-display">
+            <div><span class="tag">Register value</span><br><span id="moderHex">0x00000000</span></div>
+            <div><span class="tag">Binary</span><br><span id="moderBin" style="font-size:0.78rem;">0000 0000 0000 0000 0000 0000 0000 0000</span></div>
+          </div>
+          <div class="code-title">Generated code for <span id="focusPinLabel">pin 5</span></div>
+          <div class="code-block" id="moderCodeRaw"></div>
+          <div class="code-block" id="moderCodeCmsis"></div>
+        </div>
+        <div class="callout warn">
+          <span class="callout-label">A real-world gotcha</span>
+          <p>On most STM32 boards, two pins — usually PA13 and PA14 — default to a special alternate-function mode that connects them to the onboard debugger (SWD). Switch those to plain GPIO and you can lose the ability to reprogram the board over USB. Worth knowing before you reach for "just set every pin to output."</p>
+        </div>
+
+        <h3>4.5 &nbsp;GPIOx_OTYPER — how an output pin pushes voltage</h3>
+        <p><code>OTYPER</code> only matters for pins already in output mode, and it only needs <strong>1 bit per pin</strong> (16 of the 32 bits are used).</p>
+        <table>
+          <tr><th>Bit</th><th>Mode</th><th>Behaviour</th></tr>
+          <tr><td><code>0</code></td><td>Push-pull <em>(default)</em></td><td>Actively drives the line to 3.3&nbsp;V for a 1, and to 0&nbsp;V for a 0. What you want for LEDs and most digital outputs.</td></tr>
+          <tr><td><code>1</code></td><td>Open-drain</td><td>Pulls the line to 0&nbsp;V for a 0, but simply <em>disconnects</em> (floats) for a 1 — you need an external pull-up resistor to actually reach 3.3&nbsp;V. Required for shared buses like I2C.</td></tr>
+        </table>
+        <p class="small-note">In practice, you rarely touch this register — push-pull, the default, is what almost every project needs.</p>
+
+        <h3>4.6 &nbsp;GPIOx_PUPDR — taming a floating input pin</h3>
+        <p>Leave an input pin totally disconnected and its voltage drifts unpredictably — it "floats," randomly reading 0 or 1 from electrical noise. <code>PUPDR</code> switches on a tiny internal resistor to pin that voltage down firmly:</p>
+        <table>
+          <tr><th>Bits</th><th>Setting</th><th>When you'd use it</th></tr>
+          <tr><td><code>00</code></td><td>None <em>(default)</em></td><td>Fine when something external always drives the pin.</td></tr>
+          <tr><td><code>01</code></td><td>Pull-up</td><td>Pin is pulled internally to 3.3&nbsp;V. Perfect for a button wired to ground — the pin reads 1 (high) until the button is pressed and yanks it to 0.</td></tr>
+          <tr><td><code>10</code></td><td>Pull-down</td><td>Pin is pulled internally to 0&nbsp;V. For a button wired to the 3.3&nbsp;V rail instead — reads 0 until pressed.</td></tr>
+        </table>
+        <div class="widget">
+          <span class="widget-label">Interactive · PUPDR for pin 4</span>
+          <div class="widget-controls">
+            <button class="btn ghost pupdr-opt active" data-v="00" onclick="setPupdr('00',this)">None</button>
+            <button class="btn ghost pupdr-opt" data-v="01" onclick="setPupdr('01',this)">Pull-up</button>
+            <button class="btn ghost pupdr-opt" data-v="10" onclick="setPupdr('10',this)">Pull-down</button>
+          </div>
+          <div class="result-line" id="pupdrCode"></div>
+        </div>
+
+        <h3>4.7 &nbsp;GPIOx_IDR and GPIOx_ODR — the two you use every loop</h3>
+        <p>Once a pin's mode is configured, these are the registers your running code actually touches, over and over:</p>
+        <table>
+          <tr><th>Register</th><th>Access</th><th>Job</th></tr>
+          <tr><td><code>GPIOx_IDR</code></td><td>Read-only</td><td>Reflects the current digital state (0 or 1) of every pin on the port.</td></tr>
+          <tr><td><code>GPIOx_ODR</code></td><td>Read/write</td><td>Sets the digital state you want an output pin to drive.</td></tr>
+        </table>
+        <div class="code-block"><span class="k">uint32_t</span> pin_state = (*((<span class="k">volatile uint32_t</span>*)<span class="n">0x50000010</span>)) &amp; (1 &lt;&lt; 4); <span class="c">// read pin 4 of Port A</span>
+<span class="k">if</span> (pin_state != 0){
+    *((<span class="k">volatile uint32_t</span>*)<span class="n">0x50000014</span>) |= 1 &lt;&lt; 5;   <span class="c">// set pin 5 high</span>
+} <span class="k">else</span>{
+    *((<span class="k">volatile uint32_t</span>*)<span class="n">0x50000014</span>) &amp;= ~(1 &lt;&lt; 5); <span class="c">// clear pin 5 (set it low)</span>
+}</div>
+      </section>
+
+      <!-- PART 5 -->
+      <section class="section" id="part5">
+        <span class="eyebrow-num">Part 5</span>
+        <h2>Putting it all together</h2>
+        <p class="section-intro">The running example throughout the lecture: an LED on pin PA5, and a pushbutton on pin PA4, wired through an internal pull-up.</p>
+        <p>The wiring means the pin reads <strong>high</strong> when the button is <em>not</em> pressed (pulled up to 3.3&nbsp;V), and reads <strong>low</strong> the instant it's pressed (pulled down to ground). The example logic lights the LED whenever the pin reads high — so releasing the button turns the LED <em>on</em>, and pressing it turns the LED <em>off</em>. Try it:</p>
+        <div class="widget">
+          <span class="widget-label">Interactive · the whole example, live</span>
+          <div class="led-demo">
+            <div class="led-visual">
+              <div class="led-bulb on" id="ledBulb"></div>
+              <div class="led-caption">LED — pin PA5</div>
+            </div>
+            <div class="led-visual">
+              <div class="button-visual" id="pushBtn">hold to<br>press</div>
+              <div class="led-caption">Button — pin PA4</div>
+            </div>
+            <div class="led-status">
+              <div>GPIOA_IDR bit 4 (button pin): <strong id="idrBitVal">1</strong></div>
+              <div>GPIOA_ODR bit 5 (LED pin): <strong id="odrBitVal">1</strong></div>
+              <div id="ledStatusText">Button released → pin reads high → LED on.</div>
+            </div>
+          </div>
+        </div>
+        <p>And here is the complete raw-pointer program behind that behaviour, exactly as built up across the lecture:</p>
+        <div class="code-block"><span class="k">int</span> main(<span class="k">void</span>){
+    *((<span class="k">volatile uint32_t</span>*)<span class="n">0x40021034</span>) |= (1&lt;&lt;0);        <span class="c">// enable clock for GPIOA</span>
+
+    *((<span class="k">volatile uint32_t</span>*)<span class="n">0x50000000</span>) &amp;= ~(0b11&lt;&lt;10);    <span class="c">// clear pin 5's mode bits</span>
+    *((<span class="k">volatile uint32_t</span>*)<span class="n">0x50000000</span>) |=  0b01&lt;&lt;10;     <span class="c">// pin 5 → output</span>
+
+    *((<span class="k">volatile uint32_t</span>*)<span class="n">0x50000000</span>) &amp;= ~(0b11&lt;&lt;8);     <span class="c">// pin 4 → input (redundant, it's the default)</span>
+    *((<span class="k">volatile uint32_t</span>*)<span class="n">0x5000000C</span>) |=  0b01&lt;&lt;8;      <span class="c">// pin 4 → enable internal pull-up</span>
+
+    <span class="k">while</span>(1){
+        <span class="k">uint32_t</span> pin_state = (*((<span class="k">volatile uint32_t</span>*)<span class="n">0x50000010</span>)) &amp; (1&lt;&lt;4); <span class="c">// read pin 4</span>
+        <span class="k">if</span> (pin_state != 0){
+            *((<span class="k">volatile uint32_t</span>*)<span class="n">0x50000014</span>) |= 1&lt;&lt;5;       <span class="c">// pin 5 high</span>
+        } <span class="k">else</span>{
+            *((<span class="k">volatile uint32_t</span>*)<span class="n">0x50000014</span>) &amp;= ~(1&lt;&lt;5);    <span class="c">// pin 5 low</span>
+        }
+    }
+    <span class="k">return</span> 0;
+}</div>
+        <p class="small-note">Notice every single line follows the same shape you've now seen four times: an address, a read or write, and a bit mask built from <code>&lt;&lt;</code>, <code>|</code>, <code>&amp;</code> and <code>~</code>. That repetition is the whole point — once the pattern clicks, every peripheral on the chip becomes approachable.</p>
+      </section>
+
+      <!-- PART 6 -->
+      <section class="section" id="part6">
+        <span class="eyebrow-num">Part 6</span>
+        <h2>Writing embedded code, in practice</h2>
+        <p class="section-intro">A short tour of the tools this course actually uses, and what happens to your C file between "save" and "the LED turns on".</p>
+
+        <h3>6.1 &nbsp;The tools</h3>
+        <div class="grid-2">
+          <div class="card"><h4>VS&nbsp;Code</h4><p style="margin-bottom:0">A free, multi-language IDE (Windows/Linux/macOS). With the STM32Cube extension installed, you don't need a separate standalone IDE like Keil MicroVision or STM32CubeIDE.</p></div>
+          <div class="card"><h4>Wokwi Simulator</h4><p style="margin-bottom:0">A browser-based digital simulator for Arduino, ESP, Pico and Nucleo boards — lets you test code against simulated components before ever touching real hardware, and has its own VS Code extension.</p></div>
+        </div>
+
+        <h3>6.2 &nbsp;From <code>main.c</code> to a running chip</h3>
+        <p>Click each stage to see what it does:</p>
+        <div class="widget">
+          <span class="widget-label">Interactive · build pipeline</span>
+          <div class="flow-steps" id="flowSteps"></div>
+          <div class="flow-detail" id="flowDetail"></div>
+        </div>
+      </section>
+
+      <!-- PART 7 -->
+      <section class="section" id="part7">
+        <span class="eyebrow-num">Part 7</span>
+        <h2>CMSIS: making the code readable</h2>
+        <p class="section-intro">Raw pointer arithmetic works, but it's easy to mistype an address and impossible to read back later. This is what CMSIS fixes.</p>
+
+        <h3>7.1 &nbsp;What is CMSIS?</h3>
+        <p><strong>CMSIS</strong> (Cortex Microcontroller Software Interface Standard) is a hardware abstraction layer that Arm itself publishes for every Cortex-M chip. It takes every hex address and every bitfield from the reference manual and wraps them in named C structures, so instead of remembering <code>0x4002 1034</code> you write <code>RCC-&gt;IOPENR</code>.</p>
+        <p>To use it, you include the header file for your specific chip — for the STM32C031C6, that's <code>#include "stm32c0xx.h"</code> (downloaded from the STM32 GitHub repository). Every chip family has its own header, because every chip's addresses differ.</p>
+        <div class="code-title">The same line, three ways</div>
+        <div class="code-block">*((<span class="k">volatile uint32_t</span>*)<span class="n">0x40021034</span>) |= (1&lt;&lt;0);         <span class="c">// raw address + raw bit</span>
+RCC-&gt;IOPENR |= (1&lt;&lt;0);                              <span class="c">// named register, raw bit</span>
+RCC-&gt;IOPENR |= RCC_IOPENR_GPIOAEN;                   <span class="c">// named register, named bit</span></div>
+        <p>All three lines do exactly the same thing to the exact same address. The third is the one you'll write in practice — it reads almost like a sentence, and a typo in a macro name fails to compile instead of silently writing to the wrong address.</p>
+
+        <h3>7.2 &nbsp;Multi-bit fields need a small family of macros</h3>
+        <p>A single on/off bit only needs one macro. But a 2-bit field like <code>MODER</code>'s needs a small family, generated by the header for every pin:</p>
+        <div class="code-block"><span class="c">// The least-significant bit of the pair</span>
+#define PERIPHERAL_REGISTER_BITFIELD_Pos   (LSB_of_bit_pair)
+<span class="c">// A mask covering both bits of the field</span>
+#define PERIPHERAL_REGISTER_BITFIELD_Msk   (0b11 &lt;&lt; PERIPHERAL_REGISTER_BITFIELD_Pos)
+<span class="c">// Just the low bit of the pair set</span>
+#define PERIPHERAL_REGISTER_BITFIELD_0     (0b01 &lt;&lt; PERIPHERAL_REGISTER_BITFIELD_Pos)
+<span class="c">// Just the high bit of the pair set</span>
+#define PERIPHERAL_REGISTER_BITFIELD_1     (0b10 &lt;&lt; PERIPHERAL_REGISTER_BITFIELD_Pos)</div>
+        <p>Applied to pin 5's mode field, that becomes <code>GPIO_MODER_MODE5_Msk</code>, <code>GPIO_MODER_MODE5_0</code> and <code>GPIO_MODER_MODE5_1</code>. To build any of the four 2-bit values, you clear the field with the mask, then OR in whichever of <code>_0</code> / <code>_1</code> you need:</p>
+        <table>
+          <tr><th>Binary value</th><th>Mode</th><th>What you OR in</th></tr>
+          <tr><td><code>00</code></td><td>Input</td><td>nothing — clearing the mask is enough</td></tr>
+          <tr><td><code>01</code></td><td>Output</td><td><code>GPIO_MODER_MODE5_0</code></td></tr>
+          <tr><td><code>10</code></td><td>Alternate function</td><td><code>GPIO_MODER_MODE5_1</code></td></tr>
+          <tr><td><code>11</code></td><td>Analog</td><td><code>GPIO_MODER_MODE5_0 | GPIO_MODER_MODE5_1</code></td></tr>
+        </table>
+        <div class="code-block">GPIOA-&gt;MODER &amp;= ~(GPIO_MODER_MODE5_Msk);                          <span class="c">// clear pin 5's field</span>
+GPIOA-&gt;MODER |=  GPIO_MODER_MODE5_0;                               <span class="c">// pin 5 → output</span>
+
+<span class="c">// pin 5 → analog instead:</span>
+GPIOA-&gt;MODER &amp;= ~(GPIO_MODER_MODE5_Msk);
+GPIOA-&gt;MODER |= (GPIO_MODER_MODE5_0 | GPIO_MODER_MODE5_1);</div>
+
+        <h3>7.3 &nbsp;The full example again, this time in CMSIS</h3>
+        <p>Compare this to the raw-pointer version in Part 5 — same chip, same behaviour, same addresses under the hood:</p>
+        <div class="code-block"><span class="k">int</span> main(<span class="k">void</span>){
+    RCC-&gt;IOPENR |= RCC_IOPENR_GPIOAEN;                 <span class="c">// enable clock for GPIOA</span>
+
+    GPIOA-&gt;MODER &amp;= ~(GPIO_MODER_MODE5_Msk);
+    GPIOA-&gt;MODER |=  GPIO_MODER_MODE5_0;               <span class="c">// pin 5 → output</span>
+
+    GPIOA-&gt;MODER &amp;= ~(GPIO_MODER_MODE4_Msk);           <span class="c">// pin 4 → input</span>
+    GPIOA-&gt;PUPDR |=  GPIO_PUPDR_PUPD4_0;                <span class="c">// pin 4 → pull-up</span>
+
+    <span class="k">while</span>(1){
+        <span class="k">uint32_t</span> pin_state = (GPIOA-&gt;IDR) &amp; (GPIO_IDR_ID4);
+        <span class="k">if</span> (pin_state != 0){
+            GPIOA-&gt;ODR |= GPIO_ODR_OD5;                <span class="c">// pin 5 high</span>
+        } <span class="k">else</span>{
+            GPIOA-&gt;ODR &amp;= ~(GPIO_ODR_OD5);             <span class="c">// pin 5 low</span>
+        }
+    }
+    <span class="k">return</span> 0;
+}</div>
+        <div class="callout info">
+          <span class="callout-label">Reading tip</span>
+          <p>Notice LO3 in one glance: "using addressing, CMSIS and HAL." CMSIS <em>is</em> a hardware abstraction layer (that's the H, A and L) — it's the specific one Arm ships, sitting directly on top of the raw addressing you learned in Parts 2–5.</p>
+        </div>
+      </section>
+
+      <!-- SUMMARY -->
+      <section class="section" id="summary">
+        <h2>Summary</h2>
+        <div class="grid-3">
+          <div class="card">
+            <h4>LO1 — Memory map</h4>
+            <p style="margin-bottom:0">A 32-bit chip has a 4 GB address space split into boot space, flash, RAM, peripheral registers, and ARM core peripherals. Each address holds one byte, so subtracting addresses tells you sizes directly.</p>
+          </div>
+          <div class="card">
+            <h4>LO2 — Reference manual</h4>
+            <p style="margin-bottom:0">Every register's address is <code>base address + offset</code>, both found in the manual's tables. Learn that lookup process once; it works for every peripheral, on every Cortex-M chip.</p>
+          </div>
+          <div class="card">
+            <h4>LO3 — GPIO in practice</h4>
+            <p style="margin-bottom:0"><code>MODER</code>, <code>OTYPER</code>, <code>PUPDR</code>, <code>IDR</code> and <code>ODR</code> configure and drive a pin. Write it with raw pointers to see exactly what's happening, then write it with CMSIS because it's what you'll actually use.</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- GLOSSARY -->
+      <section class="section" id="glossary">
+        <h2>Glossary</h2>
+        <p class="section-intro">Tap a card to flip it.</p>
+        <div class="glossary-grid" id="glossaryGrid"></div>
+      </section>
+
+      <!-- QUIZ -->
+      <section class="section" id="quiz">
+        <h2>Self-check quiz</h2>
+        <p class="section-intro">Five questions. No pressure — this just tells you what to reread.</p>
+        <div id="quizContainer"></div>
+        <div id="quiz-score"></div>
+      </section>
+
+    </div>
+
+    <footer>
+      Study notes rebuilt from ENGE X200, Lecture 2 — <em>Memory Maps, Reference Manuals and Registers</em>. Reference manuals cited: RM0490 (STM32C0), RM0440 (STM32G4), UM2953 (Nucleo-64 / MB1717 boards).
+    </footer>
+  </main>
+</div>
+
+<script>
+/* ---------- progress bar + scrollspy ---------- */
+const progressBar = document.getElementById('progress');
+window.addEventListener('scroll', () => {
+  const h = document.documentElement;
+  const scrolled = (h.scrollTop) / (h.scrollHeight - h.clientHeight) * 100;
+  progressBar.style.width = scrolled + '%';
+});
+
+const tocLinks = document.querySelectorAll('.toc a');
+const targets = Array.from(tocLinks).map(a => document.querySelector(a.getAttribute('href'))).filter(Boolean);
+const spy = new IntersectionObserver((entries) => {
+  entries.forEach(entry => {
+    if (entry.isIntersecting) {
+      const id = '#' + entry.target.id;
+      tocLinks.forEach(a => a.classList.toggle('active', a.getAttribute('href') === id));
+    }
+  });
+}, { rootMargin: '-15% 0px -70% 0px' });
+targets.forEach(t => spy.observe(t));
+
+/* mobile menu */
+const menuToggle = document.getElementById('menuToggle');
+const sidebar = document.getElementById('sidebar');
+menuToggle.addEventListener('click', () => sidebar.classList.toggle('open'));
+tocLinks.forEach(a => a.addEventListener('click', () => sidebar.classList.remove('open')));
+
+/* ---------- helpers ---------- */
+function parseHex(str){
+  if(!str) return NaN;
+  let s = str.trim().toLowerCase().replace(/^0x/,'').replace(/\s+/g,'');
+  if(s === '' || /[^0-9a-f]/.test(s)) return NaN;
+  return parseInt(s,16);
+}
+function toHex(n){ return '0x' + (n>>>0).toString(16).toUpperCase().padStart(8,'0'); }
+
+/* ---------- memory map explorer ---------- */
+const mmData = {
+  core:  {range:'0xE000 0000 – 0xFFFF FFFF', title:'ARM core peripherals', text:'Features built into the Arm Cortex-M processor itself, not the STM32 chip vendor — things like interrupt handling and the internal system timer. Identical across almost every Cortex-M chip you\'ll ever use.'},
+  periph:{range:'0x4000 0000 – 0xDFFF FFFF', title:'Peripheral registers', text:'Address space for the "extra" hardware bolted onto the Arm core: GPIO pins, timers, ADCs, UART, I2C, SPI. This is where RCC and GPIOA live, and where most of this lecture happens.'},
+  ram:   {range:'0x2000 0000 onward', title:'RAM (SRAM)', text:'Where your program\'s active variables live while it runs. Fast to read and write, but wiped clean the instant power is disconnected.'},
+  flash: {range:'0x0800 0000 onward', title:'Flash memory', text:'Where your compiled program is uploaded and stored. Persists across power cycles — it\'s still there next time you switch the board on.'},
+  boot:  {range:'0x0000 0000 onward', title:'Boot space', text:'The very first address the processor looks at the instant it powers on or resets. It points to whatever should run first — usually the start of flash.'}
+};
+document.querySelectorAll('.mm-band').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.mm-band').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    const d = mmData[btn.dataset.key];
+    document.getElementById('mmInfo').innerHTML =
+      `<span class="mm-range">${d.range}</span><h5>${d.title}</h5><p style="margin-bottom:0">${d.text}</p>`;
+  });
+});
+
+/* ---------- size calculator ---------- */
+function calcSize(){
+  const s = parseHex(document.getElementById('szStart').value);
+  const e = parseHex(document.getElementById('szEnd').value);
+  const out = document.getElementById('szResult');
+  if(isNaN(s) || isNaN(e)){ out.textContent = 'Enter valid hex addresses, e.g. 0x08000000'; return; }
+  const diff = e - s;
+  if(diff < 0){ out.textContent = 'End address should be larger than the start address.'; return; }
+  const kb = diff/1024;
+  out.innerHTML = `${toHex(e).replace('0x','0x')} <span class="arrow">−</span> ${toHex(s)} = 0x${diff.toString(16).toUpperCase()} <span class="arrow">=</span> ${diff.toLocaleString()} bytes <span class="arrow">=</span> ${Number.isInteger(kb) ? kb : kb.toFixed(2)} KB`;
+}
+function loadG4(){
+  document.getElementById('szStart').value = '0x08000000';
+  document.getElementById('szEnd').value = '0x08080000';
+  calcSize();
+}
+calcSize();
+
+/* ---------- base+offset calculator ---------- */
+function calcAddr(){
+  const b = parseHex(document.getElementById('baseAddr').value);
+  const o = parseHex(document.getElementById('offAddr').value);
+  const out = document.getElementById('addrResult');
+  if(isNaN(b) || isNaN(o)){ out.textContent = 'Enter valid hex values.'; return; }
+  out.innerHTML = `${toHex(b)} <span class="arrow">+</span> 0x${o.toString(16).toUpperCase()} <span class="arrow">=</span> ${toHex(b+o)}`;
+}
+calcAddr();
+
+/* ---------- bitwise playground ---------- */
+const bitState = { val:[0,0,0,0], mask:[0,0,0,0] }; // index 0..3 => bit3..bit0 shown left to right
+document.querySelectorAll('.bit[data-row]').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const row = btn.dataset.row, i = +btn.dataset.i;
+    const arrIdx = 3 - i; // data-i is bit index (3=MSB..0=LSB), stored left-to-right
+    bitState[row][3-i] = bitState[row][3-i] ? 0 : 1;
+    btn.textContent = bitState[row][3-i];
+    btn.classList.toggle('on', bitState[row][3-i]===1);
+  });
+});
+function bitOp(op){
+  const v = bitState.val, m = bitState.mask;
+  let r = [0,0,0,0];
+  let explain = '';
+  if(op==='and'){ r = v.map((b,i)=> b & m[i]); explain = 'AND keeps a bit only where BOTH Value and Mask are 1. Everywhere the mask is 0, the result is forced to 0 — this is how &= clears bits.'; }
+  if(op==='or'){ r = v.map((b,i)=> b | m[i]); explain = 'OR sets a bit wherever EITHER Value or Mask is 1. Everywhere the mask is 1, the result is forced to 1 — this is how |= sets bits, without disturbing the rest.'; }
+  if(op==='xor'){ r = v.map((b,i)=> b ^ m[i]); explain = 'XOR flips a bit wherever the mask is 1, and leaves it alone where the mask is 0 — handy for toggling.'; }
+  if(op==='notmask'){ r = m.map(b => b?0:1); explain = '~ (NOT) flips every bit of the Mask on its own. This is how you turn "the bits I want to change" into "the bits I want to protect" before an AND.'; }
+  ['res3','res2','res1','res0'].forEach((id,i) => { document.getElementById(id).textContent = r[i]; });
+  document.getElementById('bitExplain').textContent = explain;
+}
+
+/* ---------- MODER simulator ---------- */
+const pinModes = ['00','01','10','11'];
+const modeNames = {'00':'Input','01':'Output','10':'Alt fn','11':'Analog'};
+const modeClass = {'00':'state-input','01':'state-output','10':'state-alt','11':'state-analog'};
+let pinState = new Array(16).fill('00');
+let focusPin = 5;
+const pinGrid = document.getElementById('pinGrid');
+
+function buildPinGrid(){
+  pinGrid.innerHTML = '';
+  for(let i=15;i>=0;i--){
+    const el = document.createElement('button');
+    el.className = 'pin-btn';
+    el.id = 'pin'+i;
+    el.innerHTML = `<span class="pin-name">PA${i}</span><span class="pin-state">${modeNames[pinState[i]]}</span>`;
+    el.addEventListener('click', () => {
+      const cur = pinModes.indexOf(pinState[i]);
+      pinState[i] = pinModes[(cur+1)%4];
+      focusPin = i;
+      renderPins();
+    });
+    pinGrid.appendChild(el);
+  }
+}
+function renderPins(){
+  for(let i=0;i<16;i++){
+    const el = document.getElementById('pin'+i);
+    el.className = 'pin-btn ' + modeClass[pinState[i]] + (i===focusPin ? ' focused' : '');
+    el.querySelector('.pin-state').textContent = modeNames[pinState[i]];
+  }
+  let reg = 0;
+  for(let i=0;i<16;i++){ reg |= (parseInt(pinState[i],2) << (i*2)); }
+  document.getElementById('moderHex').textContent = toHex(reg);
+  const bin = (reg>>>0).toString(2).padStart(32,'0');
+  document.getElementById('moderBin').textContent = bin.match(/.{1,4}/g).join(' ');
+
+  document.getElementById('focusPinLabel').textContent = 'pin ' + focusPin;
+  const bits = pinState[focusPin];
+  const rawAddr = '0x50000000';
+  document.getElementById('moderCodeRaw').innerHTML =
+    `*((<span class="k">volatile uint32_t</span>*)<span class="n">${rawAddr}</span>) &amp;= ~(0b11 &lt;&lt; ${focusPin*2});  <span class="c">// clear pin ${focusPin}'s field</span>\n` +
+    `*((<span class="k">volatile uint32_t</span>*)<span class="n">${rawAddr}</span>) |=  0b${bits} &lt;&lt; ${focusPin*2};  <span class="c">// set pin ${focusPin} → ${modeNames[bits]}</span>`;
+
+  let cmsisSet = '';
+  if(bits==='00') cmsisSet = `<span class="c">// no OR needed — clearing the mask already gives 00 (Input)</span>`;
+  if(bits==='01') cmsisSet = `GPIOA-&gt;MODER |=  GPIO_MODER_MODE${focusPin}_0;`;
+  if(bits==='10') cmsisSet = `GPIOA-&gt;MODER |=  GPIO_MODER_MODE${focusPin}_1;`;
+  if(bits==='11') cmsisSet = `GPIOA-&gt;MODER |= (GPIO_MODER_MODE${focusPin}_0 | GPIO_MODER_MODE${focusPin}_1);`;
+  document.getElementById('moderCodeCmsis').innerHTML =
+    `GPIOA-&gt;MODER &amp;= ~(GPIO_MODER_MODE${focusPin}_Msk);  <span class="c">// clear pin ${focusPin}'s field</span>\n${cmsisSet}`;
+}
+function loadLedExample(){ pinState = new Array(16).fill('00'); pinState[5]='01'; focusPin=5; renderPins(); }
+function resetPins(){ pinState = new Array(16).fill('00'); renderPins(); }
+buildPinGrid(); loadLedExample();
+
+/* ---------- PUPDR mini widget ---------- */
+function setPupdr(v, btn){
+  document.querySelectorAll('.pupdr-opt').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  const map = {'00':{name:'None', code:'GPIOA->PUPDR &= ~(GPIO_PUPDR_PUPD4_Msk); // no pull'},
+               '01':{name:'Pull-up', code:'GPIOA->PUPDR &= ~(GPIO_PUPDR_PUPD4_Msk);\nGPIOA->PUPDR |=  GPIO_PUPDR_PUPD4_0; // pull-up'},
+               '10':{name:'Pull-down', code:'GPIOA->PUPDR &= ~(GPIO_PUPDR_PUPD4_Msk);\nGPIOA->PUPDR |=  GPIO_PUPDR_PUPD4_1; // pull-down'}};
+  document.getElementById('pupdrCode').innerHTML = `<strong>${map[v].name}</strong><br>${map[v].code.replace(/\n/g,'<br>')}`;
+}
+setPupdr('00', document.querySelector('.pupdr-opt[data-v="00"]'));
+
+/* ---------- LED / button demo ---------- */
+const bulb = document.getElementById('ledBulb');
+const pushBtn = document.getElementById('pushBtn');
+const idrVal = document.getElementById('idrBitVal');
+const odrVal = document.getElementById('odrBitVal');
+const statusText = document.getElementById('ledStatusText');
+function setPressed(pressed){
+  pushBtn.classList.toggle('pressed', pressed);
+  const idr = pressed ? 0 : 1;
+  idrVal.textContent = idr;
+  odrVal.textContent = idr;
+  bulb.classList.toggle('on', idr===1);
+  statusText.textContent = pressed
+    ? 'Button pressed → pin pulled to ground → pin reads low → LED off.'
+    : 'Button released → pull-up holds pin high → LED on.';
+}
+pushBtn.addEventListener('mousedown', ()=>setPressed(true));
+pushBtn.addEventListener('mouseup', ()=>setPressed(false));
+pushBtn.addEventListener('mouseleave', ()=>setPressed(false));
+pushBtn.addEventListener('touchstart', (e)=>{e.preventDefault();setPressed(true);});
+pushBtn.addEventListener('touchend', (e)=>{e.preventDefault();setPressed(false);});
+
+/* ---------- build pipeline ---------- */
+const flowData = [
+  {title:'Source files', text:'Your main.c, header files, and driver files — the plain C you write and read.'},
+  {title:'Preprocessor', text:'Expands every #include and #define, and resolves conditional compilation, before any real compiling starts.'},
+  {title:'Compiler', text:'Translates your C into Arm assembly language matching the target processor\'s instruction set — M0 for the C031C6, M4 for the G474RE. Run via arm-none-eabi-gcc.'},
+  {title:'Start-up file', text:'startup_stm32xxxx.s — a chip-specific file with routines and definitions that initialise the hardware before main() runs.'},
+  {title:'Assembler', text:'Turns the assembly instructions into actual machine code (1s and 0s), wrapped into temporary object files.'},
+  {title:'Linker script', text:'stm32xxxx_flash.ld — tells the linker exactly how much flash and RAM this specific chip has, so code gets mapped to real, valid addresses.'},
+  {title:'Linker', text:'Merges every object file into one single image, using the linker script to decide what goes in flash versus RAM.'},
+  {title:'Microcontroller', text:'The linked .elf file is converted to a .bin or .hex binary. A hardware debugger (ST-Link) streams that binary onto the physical chip.'}
+];
+const flowSteps = document.getElementById('flowSteps');
+const flowDetail = document.getElementById('flowDetail');
+flowData.forEach((step,i) => {
+  const b = document.createElement('button');
+  b.className = 'flow-step-btn' + (i===0?' active':'');
+  b.innerHTML = `<span class="fs-num">${i+1}</span><span class="fs-title">${step.title}</span>`;
+  b.addEventListener('click', () => {
+    document.querySelectorAll('.flow-step-btn').forEach(x=>x.classList.remove('active'));
+    b.classList.add('active');
+    flowDetail.innerHTML = `<h5>${step.title}</h5><p style="margin-bottom:0">${step.text}</p>`;
+  });
+  flowSteps.appendChild(b);
+});
+flowDetail.innerHTML = `<h5>${flowData[0].title}</h5><p style="margin-bottom:0">${flowData[0].text}</p>`;
+
+/* ---------- glossary ---------- */
+const glossaryTerms = [
+  {term:'Address', def:'A single numbered location in the 4 GB space, always written in hex. Each one holds exactly one byte.'},
+  {term:'Register', def:'A named, 32-bit address that controls or reports on real hardware — writing to it changes chip behaviour immediately.'},
+  {term:'Base address', def:'The starting address of a peripheral\'s whole block of registers, given in the manual\'s summary table.'},
+  {term:'Offset', def:'The distance from a peripheral\'s base address to one specific register within it.'},
+  {term:'Bitmask', def:'A pattern of 1s and 0s used with &, | or ~ to target exactly the bits you want to change, and leave the rest alone.'},
+  {term:'Volatile', def:'A C keyword telling the compiler a value can change outside the program\'s control, so never optimise away reads or writes to it.'},
+  {term:'Peripheral', def:'Extra hardware bolted onto the CPU — GPIO, a timer, UART — reachable only by writing to its registers.'},
+  {term:'CMSIS', def:'Arm\'s official hardware abstraction layer: named C structures standing in for raw addresses and bitfields.'},
+  {term:'RCC', def:'Reset and Control Clock — the block that switches on the clock signal every other peripheral needs before it will respond.'},
+  {term:'Reference manual', def:'The chip-specific document listing every register, its address, and what each bit does. RM0490 for the STM32C0.'}
+];
+const glossaryGrid = document.getElementById('glossaryGrid');
+glossaryTerms.forEach(g => {
+  const card = document.createElement('div');
+  card.className = 'flip-card';
+  card.innerHTML = `<div class="flip-inner">
+      <div class="flip-face flip-front"><div class="term">${g.term}</div><div class="tap-hint">tap to reveal</div></div>
+      <div class="flip-face flip-back">${g.def}</div>
+    </div>`;
+  card.addEventListener('click', () => card.classList.toggle('flipped'));
+  glossaryGrid.appendChild(card);
+});
+
+/* ---------- quiz ---------- */
+const quizData = [
+  {q:'A 32-bit address space can address how many unique bytes?', opts:['65,536 (64 KB)','4,294,967,296 (4 GB)','1,024 (1 KB)','16 (one nibble)'], a:1,
+   exp:'32 bits gives 2³² possible values, and since each address holds one byte, that\'s 4,294,967,296 bytes — 4 GB.'},
+  {q:'Why do most peripherals need their clock enabled through RCC before you can use them?', opts:['They are physically disconnected until enabled','Digital logic gates need a clock pulse to move data, and peripherals are off by default to save power','It\'s a security feature to block unauthorised code','RCC generates the actual data the peripheral needs'], a:1,
+   exp:'Logic gates only move data on a clock pulse. Peripherals default to "off" to save energy, so RCC has to switch that pulse on first.'},
+  {q:'How do you calculate the address of a specific register?', opts:['Base address × offset','Base address − offset','Base address + offset','You look it up directly; there is no calculation'], a:2,
+   exp:'Register address = base address + offset. The base comes from the peripheral\'s summary table entry; the offset comes from its own chapter.'},
+  {q:'In GPIOx_MODER, what does the bit pattern 01 mean for a pin?', opts:['Input mode','General purpose output mode','Alternate function mode','Analog mode'], a:1,
+   exp:'00 = Input, 01 = Output, 10 = Alternate function, 11 = Analog.'},
+  {q:'In the line `GPIOA->MODER &= ~(GPIO_MODER_MODE5_Msk);`, what is the immediate effect?', opts:['It sets pin 5 to output mode','It clears pin 5\'s two mode bits back to 00, without touching any other pin','It enables the clock for GPIOA','It reads the current state of pin 5'], a:1,
+   exp:'AND-ing with the inverted mask clears exactly pin 5\'s two bits, leaving all other pins untouched. A separate OR is needed afterwards to set a new mode.'}
+];
+const quizContainer = document.getElementById('quizContainer');
+let scored = 0;
+quizData.forEach((q,qi) => {
+  const div = document.createElement('div');
+  div.className = 'quiz-q';
+  div.innerHTML = `<div class="quiz-prompt">${qi+1}. ${q.q}</div>` +
+    q.opts.map((o,oi)=>`<button class="quiz-opt" data-qi="${qi}" data-oi="${oi}">${o}</button>`).join('') +
+    `<div class="quiz-feedback" id="fb-${qi}" style="display:none;"></div>`;
+  quizContainer.appendChild(div);
+});
+quizContainer.addEventListener('click', (e) => {
+  const btn = e.target.closest('.quiz-opt');
+  if(!btn) return;
+  const qi = +btn.dataset.qi, oi = +btn.dataset.oi;
+  const group = quizContainer.querySelectorAll(`.quiz-opt[data-qi="${qi}"]`);
+  if(group[0].classList.contains('disabled')) return;
+  group.forEach(b=>b.classList.add('disabled'));
+  const correct = quizData[qi].a;
+  group[correct].classList.add('correct');
+  const fb = document.getElementById('fb-'+qi);
+  fb.style.display = 'block';
+  if(oi === correct){
+    fb.className = 'quiz-feedback good';
+    fb.textContent = 'Correct. ' + quizData[qi].exp;
+    scored++;
+  } else {
+    btn.classList.add('wrong');
+    fb.className = 'quiz-feedback bad';
+    fb.textContent = 'Not quite. ' + quizData[qi].exp;
+  }
+  const answered = quizContainer.querySelectorAll('.quiz-opt.disabled').length / 4;
+  if(answered === quizData.length){
+    document.getElementById('quiz-score').textContent = `Score: ${scored} / ${quizData.length}`;
+  }
+});
+</script>
+</body>
+</html>
