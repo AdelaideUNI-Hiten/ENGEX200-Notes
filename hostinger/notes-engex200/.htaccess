@@ -1,0 +1,2 @@
+RewriteEngine On
+RewriteRule ^(.*)$ https://adelaideuni-hiten.github.io/ENGEX200-Notes/$1 [R=302,L]
