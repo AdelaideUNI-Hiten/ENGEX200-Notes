@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>ENGEX200 Notes</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="assets/css/site.css" />
+</head>
+<body class="viewer-body">
+  <header class="topbar viewer-topbar">
+    <a class="icon-btn" href="index.html" title="Back to all notes">← Home</a>
+    <button id="prevBtn" class="icon-btn compact-label" title="Previous lecture" disabled>◀ <span class="label-text">Prev</span></button>
+    <button id="nextBtn" class="icon-btn compact-label" title="Next lecture" disabled><span class="label-text">Next</span> ▶</button>
+    <span id="viewerTitle" class="viewer-title"></span>
+    <div class="topbar-spacer"></div>
+    <label class="mark-done-label" title="Mark this note as done">
+      <input type="checkbox" id="markDoneCheckbox" />
+      <span class="label-text">Done</span>
+    </label>
+    <button id="printBtn" class="icon-btn" title="Print this note">🖨</button>
+    <button class="icon-btn" data-theme-toggle aria-pressed="false" title="Toggle theme">
+      <span data-theme-icon>🌙</span>
+    </button>
+  </header>
+
+  <div id="frameWrap" class="viewer-frame-wrap">
+    <iframe id="noteFrame" title="Note content"></iframe>
+  </div>
+
+  <script src="assets/js/theme.js"></script>
+  <script src="assets/js/progress.js"></script>
+  <script src="assets/js/notes-data.js"></script>
+  <script src="assets/js/viewer.js"></script>
+</body>
+</html>

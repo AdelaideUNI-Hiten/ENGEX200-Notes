@@ -1,0 +1,23 @@
+[
+  {
+    "id": "memorymap",
+    "title": "Memory Maps, Reference Manuals & Registers",
+    "file": "notes/MemoryMap.html",
+    "lecture": 2,
+    "blurb": "Microcontroller architecture, the STM32 address space, reading a reference manual, and your first GPIO registers (MODER, OTYPER, PUPDR, IDR, ODR)."
+  },
+  {
+    "id": "interrupts",
+    "title": "Interrupts",
+    "file": "notes/Interrupts.html",
+    "lecture": 3,
+    "blurb": "Why polling doesn't scale, how the NVIC and vector table work, and wiring GPIO to the CPU with EXTI — registers, triggers, and a button-driven register playground."
+  },
+  {
+    "id": "timers",
+    "title": "Timers",
+    "file": "notes/Timers.html",
+    "lecture": 4,
+    "blurb": "Hardware timers from first principles: PSC/ARR maths, interrupt-driven blinking, button debouncing, and a full register quick-reference."
+  }
+]

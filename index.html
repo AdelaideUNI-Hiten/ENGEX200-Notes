@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>ENGEX200 Notes</title>
+<meta name="description" content="Interactive study notes for ENGEX200 — memory maps, interrupts, and timers." />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="assets/css/site.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand"><span class="dot"></span> ENGEX200 Notes</div>
+    <div class="topbar-spacer"></div>
+    <button class="icon-btn" data-theme-toggle aria-pressed="false" title="Toggle theme">
+      <span data-theme-icon>🌙</span>
+    </button>
+  </header>
+
+  <main class="hub-main">
+    <section class="hero">
+      <p class="eyebrow">Embedded systems · study notes</p>
+      <h1>Read, search, and track your way through the course.</h1>
+      <p>Interactive lecture notes for ENGEX200 — memory maps, interrupts, and timers — with live register playgrounds baked in. Search jumps straight to the section you need.</p>
+
+      <div class="search-wrap">
+        <span class="search-icon">⌕</span>
+        <input id="searchInput" class="search-input" type="text" placeholder="Search across every note… (e.g. EXTI, PSC, GPIO)" autocomplete="off" />
+        <span class="search-kbd">/</span>
+        <div id="searchResults" class="search-results"></div>
+      </div>
+    </section>
+
+    <section id="noteGrid" class="note-grid" aria-label="Lecture notes"></section>
+
+    <footer class="hub-footer">
+      <span>ENGEX200 Notes</span>
+      <span>Built for reading, not just storing.</span>
+    </footer>
+  </main>
+
+  <script src="assets/js/theme.js"></script>
+  <script src="assets/js/progress.js"></script>
+  <script src="assets/js/notes-data.js"></script>
+  <script src="assets/js/search.js"></script>
+  <script>
+    function statusClass(status) {
+      return { idle: "status-idle", progress: "status-progress", done: "status-done" }[status];
+    }
+
+    function renderCards(notes) {
+      const grid = document.getElementById("noteGrid");
+      grid.innerHTML = "";
+      notes.forEach((note, i) => {
+        const status = EngexProgress.get(note.id);
+        const card = document.createElement("a");
+        card.href = `note.html?id=${encodeURIComponent(note.id)}`;
+        card.className = "note-card";
+        card.style.animationDelay = `${i * 40}ms`;
+        card.innerHTML = `
+          <div class="note-card-top">
+            <span class="lecture-tag">Lecture ${note.lecture}</span>
+            <span class="badge ${statusClass(status)}">${EngexProgress.LABELS[status]}</span>
+          </div>
+          <h3>${note.title}</h3>
+          <p>${note.blurb}</p>
+          <div class="note-card-foot">
+            <span class="note-card-open">Open note →</span>
+          </div>
+        `;
+        grid.appendChild(card);
+      });
+    }
+
+    EngexNotes.load().then(renderCards);
+    window.addEventListener("engex200:progresschange", () => EngexNotes.load().then(renderCards));
+
+    EngexSearch.init(document.getElementById("searchInput"), document.getElementById("searchResults"));
+  </script>
+</body>
+</html>
