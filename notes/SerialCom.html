@@ -1,0 +1,1296 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Serial Communication (UART) — ENGE X200 Interactive Notes</title>
+<style>
+/* ============================================================
+   DESIGN TOKENS  (kept consistent with the Timers / Interrupts notes)
+   ============================================================ */
+:root{
+  --bg:        #0A0E14;
+  --panel:     #10161F;
+  --panel-2:   #151D29;
+  --raised:    #1B2432;
+  --border:    #263140;
+  --border-lo: #1B2330;
+  --text:      #E9EEF5;
+  --text-dim:  #93A2B8;
+  --text-mute: #5D6B80;
+  --amber:     #FFB300;
+  --amber-dim: #7A5A10;
+  --amber-glow: rgba(255,179,0,.35);
+  --teal:      #4FD8CE;
+  --teal-dim:  #123B38;
+  --green:     #46D18A;
+  --red:       #FF6B6B;
+  --display: 'Century Gothic','Avenir Next','Segoe UI',sans-serif;
+  --sans:    'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;
+  --mono:    'SFMono-Regular',Consolas,'Roboto Mono','Liberation Mono',Menlo,monospace;
+  --radius:  10px;
+  --maxw:    780px;
+}
+*,*::before,*::after{ box-sizing:border-box; }
+html{ scroll-behavior:smooth; }
+body{
+  margin:0; background:var(--bg); color:var(--text);
+  font-family:var(--sans); font-size:16px; line-height:1.65;
+  -webkit-font-smoothing:antialiased;
+}
+@media (prefers-reduced-motion: reduce){
+  html{ scroll-behavior:auto; }
+  *{ animation-duration:0.001ms !important; animation-iteration-count:1 !important; transition-duration:0.001ms !important; }
+}
+h1,h2,h3,h4{ font-family:var(--display); font-weight:700; color:#fff; line-height:1.15; margin:0 0 .5em 0; }
+p{ margin:0 0 1em 0; }
+a{ color:var(--amber); }
+code, .mono{ font-family:var(--mono); }
+::selection{ background:var(--amber-glow); color:#fff; }
+::-webkit-scrollbar{ width:10px; height:10px; }
+::-webkit-scrollbar-track{ background:var(--bg); }
+::-webkit-scrollbar-thumb{ background:#28303e; border-radius:6px; }
+
+/* LAYOUT */
+.layout{ display:grid; grid-template-columns:272px 1fr; min-height:100vh; }
+.sidebar{
+  position:sticky; top:0; height:100vh; overflow-y:auto;
+  background:var(--panel); border-right:1px solid var(--border-lo);
+  padding:22px 18px 40px;
+}
+.brand{ display:flex; align-items:center; gap:10px; padding-bottom:16px; margin-bottom:14px; border-bottom:1px solid var(--border-lo); }
+.brand__chip{
+  width:34px; height:34px; border-radius:7px;
+  background:linear-gradient(155deg,#1c2431,#0d121a); border:1px solid var(--border);
+  display:flex; align-items:center; justify-content:center;
+  font-family:var(--mono); font-size:11px; color:var(--amber); font-weight:700;
+}
+.brand__text{ font-size:13px; line-height:1.3; color:var(--text-dim); }
+.brand__text b{ color:#fff; display:block; font-size:14px; font-family:var(--display); }
+.navpart{ margin:20px 0 4px; }
+.navpart__num{ font-family:var(--mono); font-size:11px; color:var(--text-mute); letter-spacing:.06em; }
+.navpart__title{ font-size:12.5px; color:var(--text-dim); margin-top:2px; font-weight:600; }
+.navlist{ list-style:none; margin:8px 0 0; padding:0; }
+.navlist li{ margin:1px 0; }
+.navlink{
+  display:block; padding:6px 10px; border-radius:7px; color:var(--text-dim); text-decoration:none;
+  font-size:13.5px; border-left:2px solid transparent; transition:background .15s ease, color .15s ease;
+}
+.navlink:hover{ background:var(--panel-2); color:#fff; }
+.navlink.active{ color:var(--amber); background:rgba(255,179,0,.08); border-left:2px solid var(--amber); }
+.sidebar-toggle{
+  display:none; position:fixed; top:14px; left:14px; z-index:50;
+  width:42px; height:42px; border-radius:9px; background:var(--panel-2); border:1px solid var(--border);
+  color:var(--text); align-items:center; justify-content:center; cursor:pointer;
+}
+.sidebar-toggle svg{ width:18px; height:18px; }
+main{ min-width:0; }
+.main-inner{ max-width:var(--maxw); margin:0 auto; padding:64px 28px 120px; }
+.wide{ max-width:940px; }
+.section{ scroll-margin-top:24px; padding-top:56px; }
+.section:first-of-type{ padding-top:0; }
+.eyebrow{ font-family:var(--mono); font-size:12px; color:var(--amber); letter-spacing:.08em; margin-bottom:10px; display:flex; align-items:center; gap:8px; }
+.eyebrow::before{ content:''; width:18px; height:1px; background:var(--amber-dim); }
+.section h2{ font-size:clamp(26px,3.4vw,34px); max-width:20ch; }
+.lede{ font-size:18px; color:var(--text-dim); max-width:58ch; }
+
+/* HERO */
+.hero{ padding-top:8px; }
+.hero__kicker{ font-family:var(--mono); font-size:12.5px; color:var(--text-mute); letter-spacing:.1em; margin-bottom:18px; }
+.hero h1{ font-size:clamp(38px,6.6vw,62px); letter-spacing:-.02em; margin-bottom:14px; }
+.hero h1 span{ color:var(--amber); }
+.hero__sub{ font-size:19px; color:var(--text-dim); max-width:56ch; margin-bottom:30px; }
+.hero__meta{ display:flex; gap:22px; flex-wrap:wrap; font-size:13px; color:var(--text-mute); font-family:var(--mono); margin-bottom:10px; }
+.hero__meta b{ color:var(--text); }
+
+/* GENERIC COMPONENTS */
+.card{ background:var(--panel-2); border:1px solid var(--border); border-radius:var(--radius); padding:20px 22px; }
+.callout{ border-left:3px solid var(--amber); background:linear-gradient(90deg, rgba(255,179,0,.09), transparent 60%); padding:14px 18px; border-radius:0 8px 8px 0; margin:20px 0; font-size:15px; }
+.callout.teal{ border-left-color:var(--teal); background:linear-gradient(90deg, rgba(79,216,206,.10), transparent 60%); }
+.callout.red{ border-left-color:var(--red); background:linear-gradient(90deg, rgba(255,107,107,.10), transparent 60%); }
+.callout b{ color:#fff; }
+.callout__label{ font-family:var(--mono); font-size:11px; text-transform:uppercase; letter-spacing:.08em; color:var(--amber); display:block; margin-bottom:5px; }
+.callout.teal .callout__label{ color:var(--teal); }
+.callout.red .callout__label{ color:var(--red); }
+.grid2{ display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+.grid3{ display:grid; grid-template-columns:repeat(3,1fr); gap:14px; }
+@media (max-width:760px){ .grid2, .grid3{ grid-template-columns:1fr; } }
+.taglist{ display:flex; flex-wrap:wrap; gap:8px; margin:12px 0; padding:0; list-style:none; }
+.tag{ font-family:var(--mono); font-size:12px; padding:4px 10px; border-radius:20px; background:var(--panel-2); border:1px solid var(--border); color:var(--text-dim); }
+table{ width:100%; border-collapse:collapse; font-size:14.5px; margin:16px 0; }
+th,td{ text-align:left; padding:9px 12px; border-bottom:1px solid var(--border-lo); vertical-align:top; }
+th{ font-family:var(--mono); font-size:12px; color:var(--text-mute); font-weight:600; text-transform:uppercase; letter-spacing:.04em; }
+tr:last-child td{ border-bottom:none; }
+td code{ color:var(--amber); white-space:nowrap; }
+pre{ background:#0D1219; border:1px solid var(--border); border-radius:9px; padding:16px 18px; overflow-x:auto; font-family:var(--mono); font-size:13.2px; line-height:1.65; margin:16px 0; }
+pre code{ color:#D6E0EC; }
+.tok-kw{ color:#C792EA; } .tok-type{ color:#4FD8CE; } .tok-num{ color:#F78C6C; }
+.tok-com{ color:#5D6B80; font-style:italic; } .tok-str{ color:#C3E88D; }
+.tok-fn{ color:#82AAFF; } .tok-amber{ color:var(--amber); }
+.codepanel{ border:1px solid var(--border); border-radius:10px; overflow:hidden; margin:18px 0; background:#0D1219; }
+.codepanel__tabs{ display:flex; background:var(--panel-2); border-bottom:1px solid var(--border); overflow-x:auto; }
+.codepanel__tab{ font-family:var(--mono); font-size:12.5px; padding:10px 16px; color:var(--text-mute); background:transparent; border:none; cursor:pointer; white-space:nowrap; border-bottom:2px solid transparent; }
+.codepanel__tab.active{ color:var(--amber); border-bottom:2px solid var(--amber); background:rgba(255,179,0,.05); }
+.codepanel__panel{ display:none; }
+.codepanel__panel.active{ display:block; }
+.codepanel__panel pre{ margin:0; border:none; border-radius:0; }
+:not(pre) > code{ background:var(--panel-2); border:1px solid var(--border-lo); padding:1px 6px; border-radius:5px; font-size:.88em; color:var(--amber); }
+details.acc{ border:1px solid var(--border); border-radius:9px; margin:10px 0; background:var(--panel-2); overflow:hidden; }
+details.acc summary{ padding:13px 16px; cursor:pointer; font-weight:600; color:#fff; list-style:none; display:flex; align-items:center; justify-content:space-between; font-size:14.5px; }
+details.acc summary::-webkit-details-marker{ display:none; }
+details.acc summary::after{ content:'+'; font-family:var(--mono); color:var(--amber); font-size:18px; font-weight:400; }
+details.acc[open] summary::after{ content:'–'; }
+details.acc .acc__body{ padding:0 16px 16px; color:var(--text-dim); font-size:14.5px; }
+details.acc .acc__body pre{ font-size:12.6px; }
+.steps{ counter-reset:stepnum; margin:22px 0; }
+.step{ position:relative; padding:4px 0 26px 40px; border-left:1px solid var(--border); margin-left:15px; }
+.step:last-child{ border-left:1px solid transparent; padding-bottom:2px; }
+.step::before{ counter-increment:stepnum; content:counter(stepnum); position:absolute; left:-15px; top:0; width:30px; height:30px; border-radius:50%; background:var(--panel-2); border:1px solid var(--amber-dim); color:var(--amber); font-family:var(--mono); font-size:13px; display:flex; align-items:center; justify-content:center; }
+.step h4{ font-size:15.5px; margin-bottom:4px; }
+.step p{ font-size:14.5px; color:var(--text-dim); margin-bottom:8px; }
+
+/* register bit fields */
+.regfield{ display:flex; border:1px solid var(--border); border-radius:7px; overflow:hidden; font-family:var(--mono); font-size:10.6px; margin:10px 0; }
+.regfield__bit{ flex:1; text-align:center; padding:8px 1px 6px; border-right:1px solid var(--border-lo); color:var(--text-mute); background:var(--panel-2); min-width:0; }
+.regfield__bit:last-child{ border-right:none; }
+.regfield__bit.on{ color:var(--amber); background:rgba(255,179,0,.09); font-weight:700; }
+.regfield__bit.on2{ color:var(--teal); background:rgba(79,216,206,.09); font-weight:700; }
+.regfield__num{ display:block; font-size:9px; color:var(--text-mute); margin-bottom:3px; }
+.regfield__name{ display:block; word-break:break-word; line-height:1.15; }
+.regwrap{ overflow-x:auto; padding-bottom:4px; }
+.regwrap .regfield{ min-width:760px; }
+.reglabel{ font-family:var(--mono); font-size:12px; color:var(--text-dim); margin:18px 0 2px; }
+
+/* glossary */
+.glossary dt{ font-family:var(--mono); color:var(--amber); font-size:14px; margin-top:14px; }
+.glossary dd{ margin:4px 0 0; color:var(--text-dim); font-size:14.5px; }
+
+/* buttons */
+.btn{ font-family:var(--sans); font-weight:600; font-size:14px; padding:10px 18px; border-radius:8px; border:1px solid var(--border); background:var(--raised); color:var(--text); cursor:pointer; transition:transform .1s ease, border-color .15s ease; }
+.btn:hover{ border-color:var(--amber-dim); }
+.btn:active{ transform:scale(.97); }
+.btn.primary{ background:var(--amber); color:#241900; border-color:var(--amber); }
+.btn.primary:hover{ filter:brightness(1.08); }
+.btn.ghost{ background:transparent; }
+.btn:disabled{ opacity:.4; cursor:not-allowed; }
+.btnrow{ display:flex; gap:10px; flex-wrap:wrap; margin:16px 0; align-items:center; }
+input[type=number], input[type=text], select{ font-family:var(--mono); background:var(--raised); border:1px solid var(--border); color:var(--text); border-radius:6px; padding:7px 9px; font-size:14px; }
+input[type=number]{ width:110px; }
+input[type=text]{ width:110px; }
+label.field{ display:flex; flex-direction:column; gap:5px; font-size:12.5px; color:var(--text-dim); white-space:nowrap; flex-shrink:0; }
+.fieldrow{ display:flex; gap:18px; flex-wrap:wrap; align-items:flex-end; margin:16px 0; }
+.widget{ border:1px solid var(--border); background:var(--panel-2); border-radius:12px; padding:22px; margin:22px 0; }
+.widget__title{ font-family:var(--mono); font-size:12px; color:var(--text-mute); text-transform:uppercase; letter-spacing:.06em; margin-bottom:14px; display:flex; align-items:center; gap:8px; }
+.widget__title .dot{ width:7px; height:7px; border-radius:50%; background:var(--green); }
+.statrow{ display:flex; gap:26px; flex-wrap:wrap; margin-top:14px; }
+.stat{ font-size:13px; color:var(--text-mute); }
+.stat b{ display:block; color:#fff; font-family:var(--mono); font-size:17px; }
+.readout{ font-family:var(--mono); background:#05070A; border:1px solid var(--border); border-radius:8px; padding:12px 16px; color:var(--amber); font-size:22px; letter-spacing:.04em; text-shadow:0 0 10px var(--amber-glow); display:inline-block; min-width:120px; text-align:center; }
+.progress{ width:100%; height:10px; background:#05070A; border:1px solid var(--border); border-radius:6px; overflow:hidden; margin-top:10px; }
+.progress__fill{ height:100%; background:linear-gradient(90deg, var(--amber-dim), var(--amber)); width:0%; transition:width .15s ease; }
+
+/* waveform */
+.wave{ display:flex; gap:3px; margin:16px 0; overflow-x:auto; padding-bottom:6px; }
+.wcell{ flex:0 0 auto; width:54px; text-align:center; }
+.wcell__lvl{ height:52px; border-radius:5px; border:1px solid var(--border); display:flex; align-items:center; justify-content:center; font-family:var(--mono); font-size:11px; color:var(--text-mute); background:var(--raised); position:relative; transition:all .15s ease; }
+.wcell__lvl.hi{ align-items:flex-start; padding-top:4px; background:linear-gradient(0deg, rgba(70,209,138,.10), rgba(70,209,138,.32)); border-color:#1c5c3c; color:var(--green); }
+.wcell__lvl.lo{ align-items:flex-end; padding-bottom:4px; background:linear-gradient(0deg, rgba(255,107,107,.32), rgba(255,107,107,.10)); border-color:#5c1a1a; color:var(--red); }
+.wcell__lvl.current{ outline:2px solid var(--amber); outline-offset:1px; }
+.wcell__lbl{ font-family:var(--mono); font-size:10.5px; color:var(--text-mute); margin-top:6px; line-height:1.3; }
+.wcell__lbl b{ display:block; color:var(--text-dim); font-size:11px; }
+
+/* ring buffer */
+.ring{ display:flex; gap:6px; flex-wrap:wrap; margin:18px 0 8px; }
+.ringcell{ width:56px; }
+.ringcell__box{ height:56px; border-radius:7px; border:1px solid var(--border); background:var(--raised); display:flex; align-items:center; justify-content:center; font-family:var(--mono); font-size:14px; color:var(--text-mute); position:relative; transition:all .15s ease; }
+.ringcell__box.filled{ color:var(--text); border-color:#2c3a4d; background:#1c2634; }
+.ringcell__box.head{ outline:2px solid var(--amber); outline-offset:2px; }
+.ringcell__box.tail{ box-shadow:inset 0 0 0 2px var(--teal); }
+.ringcell__idx{ text-align:center; font-family:var(--mono); font-size:10px; color:var(--text-mute); margin-top:4px; }
+.ringcell__ptrs{ display:flex; justify-content:center; gap:3px; margin-top:3px; min-height:16px; }
+.ptrtag{ font-family:var(--mono); font-size:9.5px; padding:1px 5px; border-radius:4px; }
+.ptrtag.head{ background:rgba(255,179,0,.15); color:var(--amber); }
+.ptrtag.tail{ background:rgba(79,216,206,.15); color:var(--teal); }
+
+/* flow diagram */
+.flow{ display:flex; flex-direction:column; align-items:flex-start; gap:0; margin:22px 0; }
+.flowbox{ border:1px solid var(--border); background:var(--panel-2); border-radius:9px; padding:12px 16px; font-size:13.5px; }
+.flowbox b{ color:#fff; font-family:var(--mono); font-size:13px; display:block; margin-bottom:2px; }
+.flowbox.amber{ border-color:var(--amber-dim); }
+.flowbox.teal{ border-color:#1d5651; }
+.flowarrow{ font-family:var(--mono); color:var(--text-mute); padding:6px 0 6px 26px; font-size:13px; }
+.flowrow{ display:flex; gap:16px; flex-wrap:wrap; align-items:center; margin:10px 0; }
+.flowrow .flowarrow{ padding:0 4px; }
+
+.cheat-highlight{ background:rgba(255,179,0,.06); }
+footer.pagefoot{ border-top:1px solid var(--border-lo); margin-top:70px; padding-top:26px; font-size:13px; color:var(--text-mute); }
+.checklist{ list-style:none; margin:14px 0; padding:0; }
+.checklist li{ display:flex; gap:10px; padding:9px 0; border-bottom:1px solid var(--border-lo); font-size:14.5px; color:var(--text-dim); }
+.checklist li:last-child{ border-bottom:none; }
+.checklist .box{ flex:0 0 auto; width:18px; height:18px; border-radius:5px; border:1px solid var(--amber-dim); margin-top:2px; }
+
+@media (max-width:920px){
+  .layout{ grid-template-columns:1fr; }
+  .sidebar{ position:fixed; left:0; top:0; width:78vw; max-width:300px; z-index:40; transform:translateX(-100%); transition:transform .25s ease; box-shadow:20px 0 40px rgba(0,0,0,.4); }
+  body.nav-open .sidebar{ transform:translateX(0); }
+  body.nav-open::after{ content:''; position:fixed; inset:0; background:rgba(0,0,0,.5); z-index:35; }
+  .sidebar-toggle{ display:flex; }
+  .main-inner{ padding-top:88px; }
+  .grid2, .grid3{ grid-template-columns:1fr; }
+  .readout{ min-width:96px; font-size:19px !important; padding:9px 12px; }
+  .fieldrow{ gap:12px; }
+}
+</style>
+</head>
+<body>
+
+<button class="sidebar-toggle" id="navToggle" aria-label="Toggle contents menu">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M3 12h18M3 18h18"/></svg>
+</button>
+
+<div class="layout">
+  <nav class="sidebar" id="sidebar">
+    <div class="brand">
+      <div class="brand__chip">L6</div>
+      <div class="brand__text"><b>ENGE X200</b>Interactive Notes</div>
+    </div>
+
+    <div class="navpart">
+      <div class="navpart__num">00</div>
+      <div class="navpart__title">Orientation</div>
+      <ul class="navlist">
+        <li><a class="navlink" href="#top">Overview</a></li>
+        <li><a class="navlink" href="#outcomes">Learning outcomes</a></li>
+      </ul>
+    </div>
+
+    <div class="navpart">
+      <div class="navpart__num">01</div>
+      <div class="navpart__title">What is USART?</div>
+      <ul class="navlist">
+        <li><a class="navlink" href="#motivation">Why we need this</a></li>
+        <li><a class="navlink" href="#meet-uart">Meet UART / USART</a></li>
+        <li><a class="navlink" href="#baud-rate">Baud rate &amp; timing</a></li>
+        <li><a class="navlink" href="#framing">Framing a byte</a></li>
+        <li><a class="navlink" href="#bottleneck">The bottleneck problem</a></li>
+        <li><a class="navlink" href="#buffers">Hardware &amp; software buffers</a></li>
+      </ul>
+    </div>
+
+    <div class="navpart">
+      <div class="navpart__num">02</div>
+      <div class="navpart__title">UART Registers</div>
+      <ul class="navlist">
+        <li><a class="navlink" href="#gpio-setup">Wiring the pins</a></li>
+        <li><a class="navlink" href="#cr1">Control register (CR1)</a></li>
+        <li><a class="navlink" href="#data-regs">BRR, RDR, TDR</a></li>
+        <li><a class="navlink" href="#interrupts">Interrupt-driven Rx/Tx</a></li>
+        <li><a class="navlink" href="#fifo-mode">FIFO mode &amp; thresholds</a></li>
+      </ul>
+    </div>
+
+    <div class="navpart">
+      <div class="navpart__num">03</div>
+      <div class="navpart__title">UART Examples</div>
+      <ul class="navlist">
+        <li><a class="navlink" href="#example">The servo project</a></li>
+        <li><a class="navlink" href="#code-walkthrough">Code walkthrough</a></li>
+      </ul>
+    </div>
+
+    <div class="navpart">
+      <div class="navpart__num">—</div>
+      <div class="navpart__title">Wrap-up</div>
+      <ul class="navlist">
+        <li><a class="navlink" href="#summary">Cheat sheet &amp; glossary</a></li>
+      </ul>
+    </div>
+  </nav>
+
+  <main>
+    <div class="main-inner">
+
+      <!-- ================= HERO ================= -->
+      <section class="hero section" id="top">
+        <div class="hero__kicker">ENGE X200 · MICROCONTROLLER PROGRAMMING · LECTURE 6</div>
+        <h1>Serial Communication<br>with <span>UART</span></h1>
+        <p class="hero__sub">Two chips, no shared clock, no idea what the other one is currently doing — and yet they manage to hold a reliable conversation down a single wire, one bit at a time. This is how, and why every register bit exists for a reason.</p>
+        <div class="hero__meta">
+          <span><b>34 slides</b> distilled</span>
+          <span><b>~35 min</b> read</span>
+          <span>Board: <b>Nucleo C031C6</b> (STM32C0)</span>
+        </div>
+      </section>
+
+      <!-- ================= OUTCOMES ================= -->
+      <section class="section" id="outcomes">
+        <div class="eyebrow">Part 00 · Orientation</div>
+        <h2>What you should walk away with</h2>
+        <p class="lede">The official learning outcomes for this lecture are short — but they hide a lot of machinery. Here's what they actually mean in practice.</p>
+        <div class="grid2" style="margin-top:22px;">
+          <div class="card">
+            <span class="callout__label" style="color:var(--amber)">LO1</span>
+            <p style="margin-bottom:0;color:#fff;font-weight:600;">Understand what USART is</p>
+            <p style="margin:8px 0 0;color:var(--text-dim);font-size:14.5px;">Not just the acronym — the actual hardware peripheral sitting inside your microcontroller that turns a byte in memory into a timed sequence of voltage pulses on a wire, and back again.</p>
+          </div>
+          <div class="card">
+            <span class="callout__label" style="color:var(--amber)">LO2</span>
+            <p style="margin-bottom:0;color:#fff;font-weight:600;">Understand the need for communication protocols</p>
+            <p style="margin:8px 0 0;color:var(--text-dim);font-size:14.5px;">Why you can't just wire two chips together and hope for the best — and what rules (baud rate, framing, buffering) two independent devices need to agree on beforehand.</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- ================= MOTIVATION ================= -->
+      <section class="section" id="motivation">
+        <div class="eyebrow">Part 01 · What is USART?</div>
+        <h2>Why we even need this</h2>
+        <p class="lede">So far in this course, you've mostly been flipping one pin at a time — turning an LED on, generating one PWM signal for one servo. That doesn't scale.</p>
+
+        <p>Imagine you wire up an external device to your microcontroller, and that device needs to receive the byte <code>0x0A</code> (binary <code>0000 1010</code>) to change state. If you send all 8 bits <b>at once</b>, in parallel, you need 8 separate output pins just for that one device — one wire per bit, all changing simultaneously.</p>
+
+        <div class="callout red">
+          <span class="callout__label">The problem</span>
+          Now imagine <i>n</i> devices like this. You very quickly run out of physical pins on the chip. A microcontroller might have 20–50 GPIO pins; a handful of parallel devices can eat all of them just for data lines, before you've even wired up the rest of your project.
+        </div>
+
+        <p>The fix is to stop sending bits in parallel and send them <b>one after another, down a single wire</b> — i.e. turn parallel data into a <b>serial</b> stream. That's literally what the hardware peripheral we're studying does:</p>
+
+        <div class="card" style="margin:18px 0;">
+          <p style="margin-bottom:8px;"><b style="color:#fff;">USART</b> = <b>U</b>niversal <b>S</b>ynchronous/<b>A</b>synchronous <b>R</b>eceiver–<b>T</b>ransmitter</p>
+          <p style="margin-bottom:0;color:var(--text-dim);font-size:14.5px;">A hardware block built into the MCU that converts parallel data (many bits at once, inside the chip) into a serial stream (one bit at a time, on a wire) — and does the reverse for incoming data.</p>
+        </div>
+
+        <p>With this peripheral, you need just <b>two wires</b>, regardless of how many bits per message you're sending:</p>
+        <ul style="color:var(--text-dim);">
+          <li><b style="color:#fff;">Tx (Transmit)</b> — the line this device uses to <i>send</i> data</li>
+          <li><b style="color:#fff;">Rx (Receive)</b> — the line this device uses to <i>receive</i> data</li>
+        </ul>
+
+        <div class="callout teal">
+          <span class="callout__label">Asynchronous vs. Synchronous</span>
+          This lecture covers <b>asynchronous</b> serial communication (UART) — no shared clock wire at all, just Tx and Rx. Synchronous communication (like SPI, which adds a shared clock line) is covered in a later lecture series.
+        </div>
+      </section>
+
+      <!-- ================= MEET UART ================= -->
+      <section class="section" id="meet-uart">
+        <h2>Meet UART / USART</h2>
+        <p class="lede">Quick terminology check, because both names get used interchangeably.</p>
+        <table>
+          <tr><th>Term</th><th>Meaning</th></tr>
+          <tr><td><code>USART</code></td><td>The full peripheral name — capable of <i>both</i> synchronous and asynchronous operation.</td></tr>
+          <tr><td><code>UART</code></td><td>The same peripheral, but specifically being used in its <i>asynchronous</i> mode (no clock line). This is what this whole lecture is about.</td></tr>
+        </table>
+        <p>The Nucleo C031C6 has <b>two</b> USART peripherals on board — <code>USART1</code> and <code>USART2</code>. They live on the same internal bus (the APB bus) and share an identical register map, so everything you learn about configuring one applies directly to the other.</p>
+      </section>
+
+      <!-- ================= BAUD RATE ================= -->
+      <section class="section" id="baud-rate">
+        <h2>Baud rate — agreeing on a tempo</h2>
+        <p class="lede">Here's the core problem with asynchronous communication: the transmitter and receiver <b>do not share a clock signal</b>. So how does the receiver know exactly when to "look" at the wire to read each bit?</p>
+
+        <p>The answer: both sides agree, <i>in advance</i>, on exactly how fast bits will be sent. This speed is called the <b>baud rate</b>, measured in bits per second (bps). Common values are <code>9600</code> and <code>115200</code> bps.</p>
+
+        <div class="callout">
+          <span class="callout__label">Think of it like this</span>
+          It's like two people agreeing beforehand to speak in exact, metronome-timed syllables — say, one syllable every 100 ms — without an actual metronome ticking between them. As long as both sides start counting at the same moment and use the same tempo, the listener can figure out where each syllable begins and ends, purely from time.
+        </div>
+
+        <p>Once you know the baud rate, you know exactly how long one bit takes to transmit:</p>
+        <div class="card" style="text-align:center;font-family:var(--mono);font-size:16px;">
+          bit time = 1 / baud rate
+        </div>
+        <p>At <code>115 200</code> bps: <code>1 / 115200 = 8.68 µs</code> per bit — both transmitter and receiver must be configured to the <i>same</i> baud rate, or the bits will be sampled at the wrong moments and the data will come out as garbage.</p>
+
+        <h3 style="margin-top:32px;font-size:19px;">Turning "baud rate" into a register value: BRR</h3>
+        <p>The USART peripheral doesn't take "115200" as an input directly. Instead, you configure a divider in the <b>Baud Rate Register (BRR)</b>, which divides down the peripheral's input clock (<code>f<sub>clk</sub></code>) to produce your target baud rate:</p>
+        <div class="card" style="text-align:center;font-family:var(--mono);font-size:16px;">
+          Desired Baud Rate = f<sub>clk</sub> / BRR
+        </div>
+        <p>Rearranged to solve for the register value you actually need to write: <code>BRR = f<sub>clk</sub> / baud</code> — rounded to the nearest whole number, since a register can't hold a fraction.</p>
+
+        <!-- WIDGET: Baud rate calculator -->
+        <div class="widget" id="baudWidget">
+          <div class="widget__title"><span class="dot"></span>Interactive · Baud rate calculator</div>
+          <div class="fieldrow">
+            <label class="field">System clock, MHz
+              <input type="number" id="baudFclk" value="48" min="1" max="200" step="1">
+            </label>
+            <label class="field">Desired baud rate (bps)
+              <select id="baudSelect">
+                <option value="9600">9600</option>
+                <option value="19200">19200</option>
+                <option value="38400">38400</option>
+                <option value="57600">57600</option>
+                <option value="115200" selected>115200</option>
+                <option value="custom">custom…</option>
+              </select>
+            </label>
+            <label class="field" id="baudCustomWrap" style="display:none;">Custom baud
+              <input type="number" id="baudCustom" value="115200" min="1" step="1">
+            </label>
+          </div>
+          <div class="statrow" id="baudStats">
+            <div class="stat">BRR (write this)<b id="statBRR">—</b></div>
+            <div class="stat">Actual baud achieved<b id="statActual">—</b></div>
+            <div class="stat">Bit time<b id="statBitTime">—</b></div>
+            <div class="stat">Error vs. desired<b id="statError">—</b></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ================= FRAMING ================= -->
+      <section class="section wide" id="framing">
+        <h2>Framing a byte: start &amp; stop bits</h2>
+        <p class="lede">Knowing the tempo (baud rate) isn't quite enough. The receiver also needs to know <i>when a byte begins</i>, since there's no separate "here comes data" wire either.</p>
+
+        <p>UART solves this with a clever trick using the line's idle state:</p>
+        <ul style="color:var(--text-dim);">
+          <li>When nothing is being sent, the wire is held <b style="color:var(--green);">HIGH</b> — this is called <b>idle</b>.</li>
+          <li>To announce "a byte is coming", the transmitter pulls the line <b style="color:var(--red);">LOW</b> for exactly one bit-time. This is the <b>start bit</b>.</li>
+          <li>The 8 data bits follow immediately, each held for one bit-time, at whatever level (high/low) represents that bit.</li>
+          <li>After the 8th bit, the line is pulled back <b style="color:var(--green);">HIGH</b> for one bit-time — the <b>stop bit</b> — then returns to idle (also high).</li>
+        </ul>
+
+        <div class="callout red">
+          <span class="callout__label">Easy to miss on the slide</span>
+          The 8 data bits are sent <b>least-significant bit (LSB) first</b>, not the order you'd normally read a binary number. <code>0x0A</code> is <code>0000 1010</code> written the normal way (MSB first), but on the wire it goes out as bit0, bit1 … bit7 → <code>0,1,0,1,0,0,0,0</code>.
+        </div>
+
+        <p>This whole scheme — 8 data bits, no parity bit, 1 stop bit — is nicknamed <b>8N1</b>, and it's the default and most common UART configuration. (Variants with 7 or 9 data bits, or an added parity bit, exist but aren't covered in this course.)</p>
+
+        <!-- WIDGET: frame builder -->
+        <div class="widget" id="frameWidget">
+          <div class="widget__title"><span class="dot"></span>Interactive · Build &amp; play a UART frame (8N1)</div>
+          <div class="fieldrow">
+            <label class="field">Byte to send (hex)
+              <input type="text" id="frameHex" value="0A" maxlength="2">
+            </label>
+            <label class="field">or decimal
+              <input type="number" id="frameDec" value="10" min="0" max="255">
+            </label>
+            <div class="btnrow" style="margin:0;">
+              <button class="btn primary" id="frameSendBtn">▶ Send this byte</button>
+              <button class="btn ghost" id="frameResetBtn">↺ Reset</button>
+            </div>
+          </div>
+          <div class="wave" id="frameWave"></div>
+          <div class="statrow">
+            <div class="stat">Line state<b id="frameLineState">IDLE (high)</b></div>
+            <div class="stat">Bits received so far (LSB→MSB)<b id="frameBitsReceived">--------</b></div>
+            <div class="stat">Value assembled into RDR<b id="frameAssembled">—</b></div>
+          </div>
+        </div>
+
+        <p style="margin-top:8px;">Notice the timing: <code>1 / baud rate</code> is the width of every single segment above — start bit, each data bit, and the stop bit all take exactly one bit-time. The receiver just needs to sample the line at that same interval, starting from the moment it detects the falling edge of the start bit.</p>
+      </section>
+
+      <!-- ================= BOTTLENECK ================= -->
+      <section class="section" id="bottleneck">
+        <h2>The bottleneck problem</h2>
+        <p class="lede">Fine — we can send a byte. But what happens when data keeps arriving, byte after byte, while your CPU has other jobs to do?</p>
+
+        <p>At <code>115 200</code> bps, one full 8N1 frame is <code>10</code> bits (1 start + 8 data + 1 stop), which takes <code>86.8 µs</code> to transmit. If your code naively fires an interrupt service routine (ISR) to read <i>every single incoming byte</i>, that ISR gets invoked roughly every 86.8 µs.</p>
+
+        <div class="callout red">
+          <span class="callout__label">Why this matters</span>
+          If your program is also running something else time-sensitive — a PWM control loop for a servo, for example — constantly interrupting it every 86.8 µs to service one UART byte can starve that other task of CPU time, causing it to misbehave or "crash".
+        </div>
+
+        <p>Two complementary fixes exist for this: a small buffer built into the hardware, and a bigger one you manage yourself in software.</p>
+      </section>
+
+      <!-- ================= BUFFERS ================= -->
+      <section class="section wide" id="buffers">
+        <h3 style="font-size:22px;">Hardware buffer (FIFO)</h3>
+        <p>The STM32 USART peripheral includes a small hardware queue — typically <b>8 bytes</b> — that sits between the wire and the CPU. Incoming bytes pile up here <b>First In, First Out (FIFO)</b>, and the CPU is only interrupted once a configurable amount has accumulated, called the <b>threshold</b>:</p>
+        <table>
+          <tr><th>Threshold setting</th><th>Bytes (of 8)</th></tr>
+          <tr><td>25%</td><td>2 bytes</td></tr>
+          <tr><td>50%</td><td>4 bytes</td></tr>
+          <tr><td>75%</td><td>6 bytes</td></tr>
+          <tr><td>100%</td><td>8 bytes (full)</td></tr>
+        </table>
+        <p>Once the buffer holds that many bytes, an interrupt fires and hands the whole batch to the CPU at once — dramatically cutting down how often the CPU gets interrupted, at the cost of a little extra latency.</p>
+
+        <h3 style="font-size:22px;margin-top:34px;">Software ring buffer</h3>
+        <p>Is 8 bytes always enough? Definitely not — think about a GPS module on a drone streaming continuous location sentences, or a user typing a long command. If the CPU is busy elsewhere and the hardware FIFO fills up completely, new incoming data gets silently lost (an "overrun").</p>
+
+        <p>The standard fix: as soon as the hardware FIFO has data, a hardware interrupt drains it into a much bigger buffer sitting in ordinary RAM — a <b>software ring buffer</b>. This is just a fixed-size array with two independent index pointers:</p>
+        <ul style="color:var(--text-dim);">
+          <li><b style="color:var(--amber);">head</b> (write index) — where the <i>next incoming</i> byte from the ISR will be written</li>
+          <li><b style="color:var(--teal);">tail</b> (read index) — where your main program will <i>read</i> the next byte from</li>
+        </ul>
+
+        <p>When either pointer reaches the last slot, it wraps back around to index 0 — hence "ring". You do this with modulo arithmetic:</p>
+        <pre><code>idx = (idx + 1) % N;              <span class="tok-com">// works for any buffer size N</span>
+idx = (idx + 1) &amp; (N - 1);        <span class="tok-com">// faster: only valid if N is a power of 2</span></code></pre>
+
+        <div class="callout teal">
+          <span class="callout__label">Full vs. empty — a subtle gotcha</span>
+          <code>head == tail</code> means the buffer is <b>empty</b> — everything written has been read. But if you let a write make <code>head</code> catch back up to <code>tail</code>, a completely <b>full</b> buffer would look identical (also <code>head == tail</code>)! The standard trick: stop writing once there is exactly <b>one empty slot left</b>, i.e. treat <code>(head + 1) % N == tail</code> as "full". You sacrifice one slot of capacity to keep full and empty distinguishable.
+        </div>
+
+        <!-- WIDGET: ring buffer -->
+        <div class="widget" id="ringWidget">
+          <div class="widget__title"><span class="dot"></span>Interactive · Ring buffer (N = 8)</div>
+          <div class="ring" id="ringCells"></div>
+          <div class="btnrow">
+            <button class="btn primary" id="ringWriteBtn">✎ Write byte (ISR)</button>
+            <button class="btn" id="ringReadBtn">📖 Read byte (main loop)</button>
+            <button class="btn ghost" id="ringResetBtn">↺ Reset</button>
+          </div>
+          <div class="statrow">
+            <div class="stat">head<b id="ringHeadVal" style="color:var(--amber);">0</b></div>
+            <div class="stat">tail<b id="ringTailVal" style="color:var(--teal);">0</b></div>
+            <div class="stat">status<b id="ringStatus">empty</b></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ================= GPIO SETUP ================= -->
+      <section class="section" id="gpio-setup">
+        <div class="eyebrow">Part 02 · UART Registers</div>
+        <h2>Wiring the pins: Alternate Function mode</h2>
+        <p class="lede">The Tx/Rx signals don't come out of just any pin. Before UART can use a physical GPIO pin, that pin has to be told "you are not a plain digital I/O right now — you belong to a peripheral".</p>
+
+        <p>This is done through two GPIO registers:</p>
+        <div class="reglabel">GPIOx_MODER — 2 bits per pin</div>
+        <table>
+          <tr><th>Value</th><th>Mode</th></tr>
+          <tr><td><code>00</code></td><td>Input</td></tr>
+          <tr><td><code>01</code></td><td>General purpose output</td></tr>
+          <tr><td><code>10</code></td><td><b style="color:#fff;">Alternate function</b> — hands the pin over to a peripheral (timer, SPI, UART, etc.)</td></tr>
+          <tr><td><code>11</code></td><td>Analog</td></tr>
+        </table>
+
+        <p>Once a pin is in Alternate Function mode, you still need to say <i>which</i> peripheral function it should carry — a single pin can usually be routed to several different peripherals. That's what the <b>Alternate Function register</b> is for:</p>
+        <ul style="color:var(--text-dim);">
+          <li><code>GPIOx→AFR[0]</code> — configures pins <code>Px0</code>–<code>Px7</code></li>
+          <li><code>GPIOx→AFR[1]</code> — configures pins <code>Px8</code>–<code>Px15</code></li>
+        </ul>
+
+        <div class="callout">
+          <span class="callout__label">On the Nucleo C031C6</span>
+          The demo project in this lecture wires <b>PA2 → USART2 Tx</b> and <b>PA3 → USART2 Rx</b> (see the User Manual <code>um2593</code>, Table 12, for the full pin map). In code:
+        </div>
+        <pre><code><span class="tok-fn">GPIO_InitPin</span>(GPIOA, 2, ALT, NONE);   <span class="tok-com">// PA2 set to Tx</span>
+<span class="tok-fn">GPIO_SetAltFcn</span>(GPIOA, 2, 1);      <span class="tok-com">// select the correct AF (alternate function) number</span>
+<span class="tok-fn">GPIO_InitPin</span>(GPIOA, 3, ALT, NONE);   <span class="tok-com">// PA3 set to Rx</span>
+<span class="tok-fn">GPIO_SetAltFcn</span>(GPIOA, 3, 1);      <span class="tok-com">// select the correct AF number</span></code></pre>
+      </section>
+
+      <!-- ================= CR1 ================= -->
+      <section class="section wide" id="cr1">
+        <h2>The Control Register — USART_CR1</h2>
+        <p class="lede">This is the main on/off switch panel for the whole peripheral. Two USARTs on this chip (USART1, USART2) — same register layout for both, sitting on the APB bus (see Chapter 26 of the STM32C0 reference manual, RM0490).</p>
+
+        <p>Key bits you'll actually touch in this course (highlighted below, out of the full 32-bit register):</p>
+        <div class="regwrap">
+          <div class="regfield" id="cr1Field"></div>
+        </div>
+        <table>
+          <tr><th>Bit</th><th>Name</th><th>Meaning</th></tr>
+          <tr><td>0</td><td><code>UE</code></td><td>USART Enable — the master on/off switch. Keep this <b>off</b> while you configure everything else.</td></tr>
+          <tr><td>2</td><td><code>RE</code></td><td>Receiver Enable — turns the Rx line on.</td></tr>
+          <tr><td>3</td><td><code>TE</code></td><td>Transmitter Enable — turns the Tx line on.</td></tr>
+          <tr><td>5</td><td><code>RXNEIE</code></td><td>Enables an interrupt whenever a new byte has fully arrived (FIFO mode off).</td></tr>
+          <tr><td>7</td><td><code>TXEIE</code></td><td>Enables an interrupt whenever the transmit register is empty and ready for more data (FIFO mode off).</td></tr>
+          <tr><td>12</td><td><code>M0</code></td><td>Word-length bit (paired with M1 below).</td></tr>
+          <tr><td>28</td><td><code>M1</code></td><td>Word-length bit — <code>M1:M0 = 00</code> → 8 bits (default) · <code>01</code> → 9 bits · <code>10</code> → 7 bits.</td></tr>
+          <tr><td>29</td><td><code>FIFOEN</code></td><td>Turns on the hardware FIFO queue (see the FIFO section below).</td></tr>
+        </table>
+      </section>
+
+      <!-- ================= DATA REGS ================= -->
+      <section class="section" id="data-regs">
+        <h2>Moving the actual bytes: BRR, RDR, TDR</h2>
+        <p class="lede">Three more registers, and they're much simpler than CR1.</p>
+        <table>
+          <tr><th>Register</th><th>Full name</th><th>What it does</th></tr>
+          <tr><td><code>BRR</code></td><td>Baud Rate Register</td><td>Sets the baud rate relative to the peripheral clock — see the calculator above: <code>BRR = f<sub>clk</sub> / baud</code>.</td></tr>
+          <tr><td><code>RDR</code></td><td>Receive Data Register (9-bit)</td><td>Holds the most recently received byte. Just read this register to get the incoming data.</td></tr>
+          <tr><td><code>TDR</code></td><td>Transmit Data Register (9-bit)</td><td>Write the byte you want to send here — the hardware shifts it out over Tx automatically.</td></tr>
+        </table>
+        <p style="color:var(--text-dim);font-size:14.5px;">Both data registers are 9 bits wide (not 8) so they can also carry the optional 9-bit word length mode mentioned above.</p>
+      </section>
+
+      <!-- ================= INTERRUPTS ================= -->
+      <section class="section wide" id="interrupts">
+        <h2>Interrupt-driven Rx and Tx (FIFO disabled)</h2>
+        <p class="lede">Rather than constantly polling "has a byte arrived yet?" in a loop, you can let the hardware tell you the instant something needs attention.</p>
+
+        <h3 style="font-size:19px;">Receiving</h3>
+        <div class="steps">
+          <div class="step"><h4>Enable <code>RXNEIE</code> in CR1</h4><p>Alongside <code>RE</code> and <code>UE</code>. This is the "tell me when a byte lands" switch.</p></div>
+          <div class="step"><h4>A byte arrives</h4><p>The hardware automatically sets the <b>RXNE</b> (Read Data Register Not Empty) flag in the Interrupt Status Register (<code>ISR</code>), which triggers your ISR.</p></div>
+          <div class="step"><h4>Read <code>USART→RDR</code></h4><p>Reading the register gets you the byte — and automatically clears <code>RXNE</code> for you. You never need to clear it manually in code; the hardware detects the read.</p></div>
+        </div>
+
+        <h3 style="font-size:19px;margin-top:30px;">Transmitting</h3>
+        <div class="steps">
+          <div class="step"><h4>Enable <code>TXEIE</code> in CR1</h4><p>Alongside <code>TE</code> and <code>UE</code>. This is the "tell me when I can send the next byte" switch.</p></div>
+          <div class="step"><h4>TDR becomes empty</h4><p>The hardware sets the <b>TXE</b> (Transmit Empty) flag in <code>ISR</code>, triggering your ISR to supply the next byte.</p></div>
+          <div class="step"><h4>Write to <code>USART→TDR</code></h4><p>This clears <code>TXE</code> automatically; it gets set again once that byte has finished shifting out.</p></div>
+          <div class="step"><h4>Turn <code>TXEIE</code> back off when done</h4><p>Once your whole message has been transmitted, disable <code>TXEIE</code> — otherwise the ISR keeps firing forever with nothing left to send.</p></div>
+        </div>
+
+        <div class="callout red">
+          <span class="callout__label">Overrun errors</span>
+          If a new byte finishes arriving before the previous one has been read out of <code>RDR</code>, the old byte is lost and the <b>ORE</b> (Overrun Error) flag is set in <code>ISR</code>. You clear it by writing to the <b>ORECF</b> bit in the Interrupt Clear Register (<code>USART→ICR</code>) — most STM32 status flags that need manual clearing follow this same "write to the matching bit in ICR" pattern.
+        </div>
+      </section>
+
+      <!-- ================= FIFO MODE ================= -->
+      <section class="section wide" id="fifo-mode">
+        <h2>Turning on FIFO mode &amp; setting thresholds</h2>
+        <p class="lede">Setting <code>FIFOEN = 1</code> in CR1 activates the 8-byte hardware queue discussed earlier. You still read from <code>RDR</code> and write to <code>TDR</code> exactly as before — the hardware silently manages the queue behind those same two registers.</p>
+
+        <p>With FIFO mode on, by default the interrupt would still fire on every single byte (via <code>RXFNEIE</code>/<code>TXFNEIE</code> — the FIFO-mode equivalents of RXNEIE/TXEIE). To actually get the CPU-saving benefit, you configure a <b>threshold</b> in <code>USART_CR3</code> instead:</p>
+
+        <div class="regwrap">
+          <div class="regfield" id="cr3Field"></div>
+        </div>
+        <table>
+          <tr><th>Bit(s)</th><th>Name</th><th>Meaning</th></tr>
+          <tr><td>23</td><td><code>TXFTIE</code></td><td>Enable an interrupt when the Tx FIFO reaches its configured threshold.</td></tr>
+          <tr><td>25–27</td><td><code>RXFTCFG</code></td><td>3-bit Rx threshold level (table below).</td></tr>
+          <tr><td>28</td><td><code>RXFTIE</code></td><td>Enable an interrupt when the Rx FIFO reaches its configured threshold.</td></tr>
+          <tr><td>29–31</td><td><code>TXFTCFG</code></td><td>3-bit Tx threshold level (table below).</td></tr>
+        </table>
+
+        <div class="grid2">
+          <div class="card">
+            <p style="margin-bottom:8px;color:#fff;font-weight:600;">RXFTCFG (Rx: fires once <i>this full</i>)</p>
+            <table style="margin:0;">
+              <tr><td><code>000</code></td><td>1/8 full (1 byte)</td></tr>
+              <tr><td><code>001</code></td><td>1/4 full (2 bytes)</td></tr>
+              <tr><td><code>010</code></td><td>1/2 full (4 bytes)</td></tr>
+              <tr><td><code>011</code></td><td>3/4 full (6 bytes)</td></tr>
+              <tr><td><code>100</code></td><td>Full (8 bytes)</td></tr>
+            </table>
+          </div>
+          <div class="card">
+            <p style="margin-bottom:8px;color:#fff;font-weight:600;">TXFTCFG (Tx: fires once <i>this empty</i>)</p>
+            <table style="margin:0;">
+              <tr><td><code>000</code></td><td>1/8 full (1 byte)</td></tr>
+              <tr><td><code>001</code></td><td>1/4 full (2 bytes)</td></tr>
+              <tr><td><code>010</code></td><td>1/2 full (4 bytes)</td></tr>
+              <tr><td><code>011</code></td><td>3/4 full (6 bytes)</td></tr>
+              <tr><td><code>100</code></td><td>Empty (0 bytes)</td></tr>
+            </table>
+          </div>
+        </div>
+        <p>In the status register <code>ISR</code>, the flags to watch become <b>RXFNE</b>/<b>RXFT</b> (receive side) and <b>TXFNF</b>/<b>TXFT</b> (transmit side) — the hardware clears <code>RXFNE</code> automatically once the FIFO queue empties out.</p>
+      </section>
+
+      <!-- ================= EXAMPLE ================= -->
+      <section class="section wide" id="example">
+        <div class="eyebrow">Part 03 · UART Examples</div>
+        <h2>Worked example: servo control over UART</h2>
+        <p class="lede">Everything above, put together into one real project from the lecture: a three-servo rig, controlled by typing commands into a serial terminal.</p>
+
+        <div class="card" style="margin-bottom:20px;">
+          <p style="margin-bottom:6px;">You open a serial monitor on your computer, connected to the Nucleo board, and type something like <code>S0:90</code> and hit Enter.</p>
+          <ul style="color:var(--text-dim);margin-bottom:0;">
+            <li>That text is <b>RECEIVED (Rx)</b> on the Nucleo, byte by byte</li>
+            <li>The MCU parses it, moves <b>servo 0 to 90°</b></li>
+            <li>The MCU <b>TRANSMITS (Tx)</b> an acknowledgment message back to the serial monitor, e.g. <code>[ACK] Servo updated</code></li>
+          </ul>
+        </div>
+
+        <h3 style="font-size:19px;">The basic flow</h3>
+        <div class="flow">
+          <div class="flowbox amber"><b>main()</b>Initialisation, then loops calling <code>USART_ProcessRxBuffer()</code></div>
+          <div class="flowarrow">├──▶</div>
+          <div class="flowbox"><b>Servo_SetAngle()</b>Generates the PWM signal that physically moves the motor</div>
+          <div class="flowarrow">└──▶</div>
+          <div class="flowbox"><b>USART_SendString()</b>Writes the acknowledgment characters into TDR</div>
+          <div class="flowarrow">⋮ (interrupt, any time)</div>
+          <div class="flowbox teal"><b>USART2_IRQHandler()</b>Reads new bytes from RDR into the ring buffer · writes queued acknowledgment bytes into TDR</div>
+        </div>
+      </section>
+
+      <!-- ================= CODE WALKTHROUGH ================= -->
+      <section class="section wide" id="code-walkthrough">
+        <h2>Code walkthrough</h2>
+        <p class="lede">The complete implementation, broken into the pieces you'd actually write, in the order they run.</p>
+
+        <div class="codepanel" id="codeTabs">
+          <div class="codepanel__tabs">
+            <button class="codepanel__tab active" data-tab="init">USART_Init()</button>
+            <button class="codepanel__tab" data-tab="send">Send helpers</button>
+            <button class="codepanel__tab" data-tab="main">main()</button>
+            <button class="codepanel__tab" data-tab="isr">ISR</button>
+            <button class="codepanel__tab" data-tab="process">Process Rx buffer</button>
+          </div>
+
+          <div class="codepanel__panel active" data-panel="init">
+<pre><code><span class="tok-type">void</span> <span class="tok-fn">USART_Init</span>(USART_TypeDef *usart, <span class="tok-type">uint32_t</span> sys_clk, <span class="tok-type">uint32_t</span> baud,
+                USART_Thresh_t fifo_threshold_rx, USART_Thresh_t fifo_threshold_tx,
+                <span class="tok-type">bool</span> enable_rx_irq, <span class="tok-type">bool</span> enable_tx_irq) {
+
+    usart->CR1 &amp;= ~(<span class="tok-num">1</span> &lt;&lt; <span class="tok-num">0</span>);              <span class="tok-com">// Disable USART before configuring it (UE = 0)</span>
+    usart->BRR  = (sys_clk / baud);       <span class="tok-com">// Set the Baud Rate Register</span>
+
+    <span class="tok-com">// Clear RE(2), TE(3), RXNEIE(5), TXEIE(7), FIFOEN(29) first</span>
+    usart->CR1 &amp;= ~((<span class="tok-num">1</span> &lt;&lt; <span class="tok-num">2</span>) | (<span class="tok-num">1</span> &lt;&lt; <span class="tok-num">3</span>) | (<span class="tok-num">1</span> &lt;&lt; <span class="tok-num">5</span>) | (<span class="tok-num">1</span> &lt;&lt; <span class="tok-num">7</span>) | (<span class="tok-num">1</span> &lt;&lt; <span class="tok-num">29</span>));
+    usart->CR1 |=  (<span class="tok-num">1</span> &lt;&lt; <span class="tok-num">2</span>) | (<span class="tok-num">1</span> &lt;&lt; <span class="tok-num">3</span>);   <span class="tok-com">// Enable Rx and Tx</span>
+
+    <span class="tok-com">// Clear FIFO threshold config + interrupt-enable bits in CR3</span>
+    usart->CR3 &amp;= ~((<span class="tok-num">0b111</span> &lt;&lt; <span class="tok-num">29</span>) | (<span class="tok-num">1</span> &lt;&lt; <span class="tok-num">28</span>) | (<span class="tok-num">0b111</span> &lt;&lt; <span class="tok-num">25</span>) | (<span class="tok-num">1</span> &lt;&lt; <span class="tok-num">23</span>));
+
+    <span class="tok-kw">if</span> (fifo_threshold_rx != FIFO_NONE || fifo_threshold_tx != FIFO_NONE) {
+        usart->CR1 |= (<span class="tok-num">1</span> &lt;&lt; <span class="tok-num">29</span>);          <span class="tok-com">// Enable Hardware FIFO</span>
+
+        <span class="tok-kw">if</span> (fifo_threshold_rx != FIFO_NONE) usart->CR3 |= (fifo_threshold_rx &lt;&lt; <span class="tok-num">25</span>);
+        <span class="tok-kw">if</span> (fifo_threshold_tx != FIFO_NONE) usart->CR3 |= (fifo_threshold_tx &lt;&lt; <span class="tok-num">29</span>);
+        <span class="tok-kw">if</span> (enable_rx_irq) usart->CR3 |= (<span class="tok-num">1</span> &lt;&lt; <span class="tok-num">28</span>);   <span class="tok-com">// RXFTIE</span>
+        <span class="tok-kw">if</span> (enable_tx_irq) usart->CR3 |= (<span class="tok-num">1</span> &lt;&lt; <span class="tok-num">23</span>);   <span class="tok-com">// TXFTIE</span>
+
+    } <span class="tok-kw">else</span> {
+        usart->CR1 &amp;= ~(<span class="tok-num">1</span> &lt;&lt; <span class="tok-num">29</span>);         <span class="tok-com">// Disable Hardware FIFO</span>
+        <span class="tok-kw">if</span> (enable_rx_irq) usart->CR1 |= (<span class="tok-num">1</span> &lt;&lt; <span class="tok-num">5</span>);   <span class="tok-com">// RXNEIE</span>
+        <span class="tok-kw">if</span> (enable_tx_irq) usart->CR1 |= (<span class="tok-num">1</span> &lt;&lt; <span class="tok-num">7</span>);   <span class="tok-com">// TXEIE</span>
+    }
+
+    <span class="tok-com">// Enable the matching NVIC interrupt line if any Rx/Tx interrupt requested</span>
+    <span class="tok-kw">if</span> (enable_rx_irq || enable_tx_irq) {
+        <span class="tok-kw">if</span>      (usart == USART1) <span class="tok-fn">NVIC_EnableIRQ</span>(USART1_IRQn);
+        <span class="tok-kw">else if</span> (usart == USART2) <span class="tok-fn">NVIC_EnableIRQ</span>(USART2_IRQn);
+    }
+
+    usart->CR1 |= (<span class="tok-num">1</span> &lt;&lt; <span class="tok-num">0</span>);   <span class="tok-com">// Configuration complete — enable USART (UE = 1)</span>
+}</code></pre>
+            <p style="color:var(--text-dim);font-size:14px;">Notice the pattern: disable (<code>UE = 0</code>) → configure every register → re-enable (<code>UE = 1</code>) at the very end. Configuring a live, running peripheral leads to undefined behaviour on most STM32 parts.</p>
+          </div>
+
+          <div class="codepanel__panel" data-panel="send">
+<pre><code><span class="tok-type">bool</span> <span class="tok-fn">USART_SendChar</span>(USART_TypeDef *usart, <span class="tok-type">char</span> c) {
+    <span class="tok-type">uint8_t</span> next_head = (usart_tx_head + <span class="tok-num">1</span>) % TX_BUF_SIZE;
+
+    <span class="tok-kw">if</span> (next_head == usart_tx_tail) {
+        <span class="tok-kw">return</span> <span class="tok-kw">false</span>;               <span class="tok-com">// ring buffer is full — refuse the write</span>
+    }
+
+    usart_tx_buf[usart_tx_head] = c;    <span class="tok-com">// store the character</span>
+    usart_tx_head = next_head;          <span class="tok-com">// advance head, wrapping via %</span>
+
+    <span class="tok-kw">if</span> (usart->CR1 &amp; (<span class="tok-num">1</span> &lt;&lt; <span class="tok-num">29</span>)) usart->CR3 |= (<span class="tok-num">1</span> &lt;&lt; <span class="tok-num">23</span>);  <span class="tok-com">// FIFO enabled: TXFTIE</span>
+    <span class="tok-kw">else</span>                             usart->CR1 |= (<span class="tok-num">1</span> &lt;&lt; <span class="tok-num">7</span>);   <span class="tok-com">// FIFO disabled: TXEIE</span>
+
+    <span class="tok-kw">return</span> <span class="tok-kw">true</span>;
+}
+
+<span class="tok-type">bool</span> <span class="tok-fn">USART_SendString</span>(USART_TypeDef *usart, <span class="tok-kw">const</span> <span class="tok-type">char</span> *str) {
+    <span class="tok-com">// Walk the string, sending one character at a time</span>
+    <span class="tok-kw">while</span> (*str) {
+        <span class="tok-kw">if</span> (!<span class="tok-fn">USART_SendChar</span>(usart, *str++)) {
+            <span class="tok-kw">return</span> <span class="tok-kw">false</span>;   <span class="tok-com">// buffer overflowed mid-string</span>
+        }
+    }
+    <span class="tok-kw">return</span> <span class="tok-kw">true</span>;
+}</code></pre>
+            <p style="color:var(--text-dim);font-size:14px;">This is exactly the ring-buffer write path from the widget above — <code>USART_SendChar</code> only ever <i>enables the transmit interrupt</i>; it never writes to <code>TDR</code> directly. The ISR (next tab) does that.</p>
+          </div>
+
+          <div class="codepanel__panel" data-panel="main">
+<pre><code><span class="tok-type">int</span> <span class="tok-fn">main</span>(<span class="tok-type">void</span>) {
+    Clock_Enables...
+    Servo_Timer_config...
+
+    <span class="tok-fn">GPIO_InitPin</span>(GPIOA, <span class="tok-num">2</span>, ALT, NONE);   <span class="tok-com">// PA2 set to Tx</span>
+    <span class="tok-fn">GPIO_SetAltFcn</span>(GPIOA, <span class="tok-num">2</span>, <span class="tok-num">1</span>);
+    <span class="tok-fn">GPIO_InitPin</span>(GPIOA, <span class="tok-num">3</span>, ALT, NONE);   <span class="tok-com">// PA3 set to Rx</span>
+    <span class="tok-fn">GPIO_SetAltFcn</span>(GPIOA, <span class="tok-num">3</span>, <span class="tok-num">1</span>);
+
+    <span class="tok-fn">USART_Init</span>(USART2, <span class="tok-num">48000000</span>, <span class="tok-num">115200</span>, FIFO_NONE, FIFO_NONE, <span class="tok-kw">true</span>, <span class="tok-kw">true</span>);
+
+    <span class="tok-fn">USART_SendString</span>(USART2, <span class="tok-str">"Servo Command System Ready!\r\n"</span>);
+
+    <span class="tok-kw">while</span> (<span class="tok-num">1</span>) {
+        <span class="tok-fn">USART_ProcessRxBuffer</span>();
+    }
+}</code></pre>
+            <p style="color:var(--text-dim);font-size:14px;">The main loop does almost nothing itself — it just keeps calling <code>USART_ProcessRxBuffer()</code>. All the real-time work (catching bytes off the wire) happens in the interrupt handler, running independently of whatever <code>main()</code> is doing.</p>
+          </div>
+
+          <div class="codepanel__panel" data-panel="isr">
+<pre><code><span class="tok-type">void</span> <span class="tok-fn">USART2_IRQHandler</span>(<span class="tok-type">void</span>) {
+
+    <span class="tok-com">// --- Rx: FIFO threshold (bit 28) OR plain RXNE (bit 5) ---</span>
+    <span class="tok-kw">if</span> ((USART2->ISR &amp; (<span class="tok-num">1</span> &lt;&lt; <span class="tok-num">28</span>)) || (USART2->ISR &amp; (<span class="tok-num">1</span> &lt;&lt; <span class="tok-num">5</span>))) {
+        <span class="tok-type">char</span> c = (<span class="tok-type">char</span>)USART2->RDR;         <span class="tok-com">// reading RDR clears the flag automatically</span>
+        <span class="tok-type">uint8_t</span> next = (rx_head + <span class="tok-num">1</span>) % RX_BUF_SIZE;
+        <span class="tok-kw">if</span> (next != rx_tail) {
+            rx_ring_buf[rx_head] = c;
+            rx_head = next;
+        }  <span class="tok-com">// else: buffer full, byte is dropped</span>
+    }
+
+    <span class="tok-com">// --- Tx: FIFO threshold (bit 23) OR plain TXE (bit 7) ---</span>
+    <span class="tok-kw">if</span> ((USART2->ISR &amp; (<span class="tok-num">1</span> &lt;&lt; <span class="tok-num">23</span>)) || (USART2->ISR &amp; (<span class="tok-num">1</span> &lt;&lt; <span class="tok-num">7</span>))) {
+        <span class="tok-fn">USART_TX_ISR_Handler</span>(USART2);   <span class="tok-com">// echoes / sends the next queued byte</span>
+    }
+}
+
+<span class="tok-type">void</span> <span class="tok-fn">USART_TX_ISR_Handler</span>(USART_TypeDef *usart) {
+    <span class="tok-kw">if</span> (usart_tx_tail != usart_tx_head) {
+        usart->TDR = usart_tx_buf[usart_tx_tail];      <span class="tok-com">// send the next queued byte</span>
+        usart_tx_tail = (usart_tx_tail + <span class="tok-num">1</span>) % TX_BUF_SIZE;
+    } <span class="tok-kw">else</span> {
+        <span class="tok-com">// nothing left to send — turn the interrupt back off</span>
+        <span class="tok-kw">if</span> (usart->CR1 &amp; (<span class="tok-num">1</span> &lt;&lt; <span class="tok-num">29</span>)) usart->CR3 &amp;= ~(<span class="tok-num">1</span> &lt;&lt; <span class="tok-num">23</span>);  <span class="tok-com">// clear TXFTIE</span>
+        <span class="tok-kw">else</span>                             usart->CR1 &amp;= ~(<span class="tok-num">1</span> &lt;&lt; <span class="tok-num">7</span>);   <span class="tok-com">// clear TXEIE</span>
+    }
+}</code></pre>
+            <p style="color:var(--text-dim);font-size:14px;">This is the "turn <code>TXEIE</code> back off when done" step from earlier, shown in real code — otherwise this ISR would fire endlessly with an empty buffer.</p>
+          </div>
+
+          <div class="codepanel__panel" data-panel="process">
+<pre><code><span class="tok-type">void</span> <span class="tok-fn">USART_ProcessRxBuffer</span>(<span class="tok-type">void</span>) {
+    <span class="tok-kw">static</span> <span class="tok-type">char</span> line_buf[<span class="tok-num">32</span>];
+    <span class="tok-kw">static</span> <span class="tok-type">uint8_t</span> line_pos = <span class="tok-num">0</span>;
+    <span class="tok-type">char</span> echo_buf[<span class="tok-num">2</span>] = {<span class="tok-num">0</span>};
+
+    <span class="tok-kw">while</span> (rx_tail != rx_head) {
+        <span class="tok-type">char</span> c = rx_ring_buf[rx_tail];
+        rx_tail = (rx_tail + <span class="tok-num">1</span>) % RX_BUF_SIZE;
+
+        <span class="tok-com">// Echo the keystroke straight back so the user sees what they typed</span>
+        <span class="tok-kw">if</span> (c != <span class="tok-str">'\r'</span> &amp;&amp; c != <span class="tok-str">'\n'</span>) {
+            echo_buf[<span class="tok-num">0</span>] = c;
+            <span class="tok-fn">USART_SendString</span>(USART2, echo_buf);
+        }
+
+        <span class="tok-com">// Enter pressed → try to parse a full command line</span>
+        <span class="tok-kw">if</span> (c == <span class="tok-str">'\r'</span> || c == <span class="tok-str">'\n'</span>) {
+            <span class="tok-kw">if</span> (line_pos > <span class="tok-num">0</span>) {
+                line_buf[line_pos] = <span class="tok-str">'\0'</span>;
+                <span class="tok-type">int</span> id = <span class="tok-num">0</span>, angle = <span class="tok-num">0</span>;
+
+                <span class="tok-kw">if</span> (<span class="tok-fn">sscanf</span>(line_buf, <span class="tok-str">"S%d:%d"</span>, &amp;id, &amp;angle) == <span class="tok-num">2</span>) {
+                    <span class="tok-fn">Servo_SetAngle</span>(id, angle);
+                    <span class="tok-fn">USART_SendString</span>(USART2, <span class="tok-str">"[ACK] Servo updated\r\n"</span>);
+                } <span class="tok-kw">else</span> {
+                    <span class="tok-fn">USART_SendString</span>(USART2, <span class="tok-str">"[ERR] Invalid Command\r\n"</span>);
+                }
+                line_pos = <span class="tok-num">0</span>;
+            }
+        } <span class="tok-kw">else if</span> (line_pos &lt; <span class="tok-kw">sizeof</span>(line_buf) - <span class="tok-num">1</span>) {
+            line_buf[line_pos++] = c;
+        }
+    }
+}</code></pre>
+            <p style="color:var(--text-dim);font-size:14px;">This is where the ring buffer finally gets drained. It builds up a text line character by character until Enter (<code>\r</code> or <code>\n</code>) arrives, then uses <code>sscanf</code> to pull a servo ID and angle out of a command like <code>S0:90</code>.</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- ================= SUMMARY ================= -->
+      <section class="section wide" id="summary">
+        <h2>Cheat sheet &amp; recap</h2>
+
+        <h3 style="font-size:19px;">Learning outcomes — can you do this now?</h3>
+        <ul class="checklist">
+          <li><span class="box"></span>Explain why parallel wiring doesn't scale, and how UART turns parallel data into a serial stream over just two wires (Tx/Rx).</li>
+          <li><span class="box"></span>Explain why an asynchronous link needs an agreed baud rate, and calculate <code>BRR</code> from a target baud rate and <code>f<sub>clk</sub></code>.</li>
+          <li><span class="box"></span>Draw or read an 8N1 frame: idle high → start bit low → 8 data bits (LSB first) → stop bit high → idle.</li>
+          <li><span class="box"></span>Explain why interrupting on every byte doesn't scale, and how hardware FIFOs + thresholds reduce interrupt frequency.</li>
+          <li><span class="box"></span>Implement a software ring buffer with head/tail pointers, including the wraparound and full/empty conditions.</li>
+          <li><span class="box"></span>Identify the key USART registers (CR1, CR3, BRR, RDR, TDR, ISR, ICR) and the bits inside them used in this course.</li>
+        </ul>
+
+        <h3 style="font-size:19px;margin-top:32px;">Register quick reference (USART1 / USART2)</h3>
+        <table>
+          <tr><th>Register</th><th>Key bits used in this course</th><th>Purpose</th></tr>
+          <tr><td><code>CR1</code></td><td><code>UE</code>(0) <code>RE</code>(2) <code>TE</code>(3) <code>RXNEIE</code>(5) <code>TXEIE</code>(7) <code>M0</code>(12) <code>M1</code>(28) <code>FIFOEN</code>(29)</td><td>Master enable, Rx/Tx enable, word length, non-FIFO interrupts, FIFO on/off</td></tr>
+          <tr><td><code>CR3</code></td><td><code>TXFTIE</code>(23) <code>RXFTCFG</code>(25–27) <code>RXFTIE</code>(28) <code>TXFTCFG</code>(29–31)</td><td>FIFO threshold levels &amp; their interrupt enables</td></tr>
+          <tr><td><code>BRR</code></td><td>whole register</td><td><code>f<sub>clk</sub> / baud</code> — sets the baud rate</td></tr>
+          <tr><td><code>RDR</code></td><td>whole register (9-bit)</td><td>Most recently received byte — reading it clears RXNE</td></tr>
+          <tr><td><code>TDR</code></td><td>whole register (9-bit)</td><td>Byte queued for transmission — writing it clears TXE</td></tr>
+          <tr><td><code>ISR</code></td><td><code>RXNE</code>(5) <code>TXE</code>(7) <code>TXFT</code>(23) <code>RXFT</code>(28) <code>ORE</code></td><td>Status flags read inside the ISR to work out what triggered it</td></tr>
+          <tr><td><code>ICR</code></td><td><code>ORECF</code></td><td>Write-1-to-clear register, e.g. for clearing an overrun error</td></tr>
+        </table>
+
+        <h3 style="font-size:19px;margin-top:32px;">The core formulas</h3>
+        <table>
+          <tr><td>Bit time</td><td><code>1 / baud rate</code></td></tr>
+          <tr><td>Baud Rate Register</td><td><code>BRR = f<sub>clk</sub> / baud</code></td></tr>
+          <tr><td>8N1 frame length</td><td><code>10 bits</code> (1 start + 8 data + 1 stop) → time = <code>10 / baud</code></td></tr>
+          <tr><td>Ring buffer index wrap</td><td><code>idx = (idx + 1) % N</code> — or <code>&amp; (N-1)</code> if N is a power of 2</td></tr>
+          <tr><td>Ring buffer full condition</td><td><code>(head + 1) % N == tail</code></td></tr>
+        </table>
+
+        <h3 style="font-size:19px;margin-top:32px;">Setup sequence, every single time</h3>
+        <div class="steps">
+          <div class="step"><h4>Enable peripheral clocks</h4><p>For both the GPIO port and the USART peripheral.</p></div>
+          <div class="step"><h4>Configure Tx/Rx pins</h4><p>Alternate Function mode in <code>MODER</code>, correct function number in <code>AFR</code>.</p></div>
+          <div class="step"><h4>Disable the USART</h4><p><code>UE = 0</code> — never configure a live peripheral.</p></div>
+          <div class="step"><h4>Set the baud rate</h4><p>Write <code>BRR = f<sub>clk</sub> / baud</code>.</p></div>
+          <div class="step"><h4>Enable Rx / Tx</h4><p><code>RE</code> and/or <code>TE</code>; enable <code>FIFOEN</code> + thresholds if you want FIFO mode.</p></div>
+          <div class="step"><h4>Enable the interrupts you need</h4><p><code>RXNEIE</code>/<code>TXEIE</code> (no FIFO) or <code>RXFTIE</code>/<code>TXFTIE</code> (FIFO).</p></div>
+          <div class="step"><h4>Enable the NVIC line</h4><p><code>NVIC_EnableIRQ(USARTx_IRQn)</code> — without this, the interrupt never reaches your handler.</p></div>
+          <div class="step"><h4>Enable the USART</h4><p><code>UE = 1</code> — configuration complete, peripheral goes live.</p></div>
+          <div class="step"><h4>Handle it in the ISR</h4><p>Check the relevant <code>ISR</code> flags, read <code>RDR</code> / write <code>TDR</code>, and shuffle bytes through your ring buffers.</p></div>
+        </div>
+
+        <h3 style="font-size:19px;margin-top:32px;">Glossary</h3>
+        <dl class="glossary">
+          <dt>UART</dt><dd>Universal Asynchronous Receiver-Transmitter — a USART used without a shared clock line.</dd>
+          <dt>USART</dt><dd>Universal Synchronous/Asynchronous Receiver-Transmitter — the general hardware peripheral.</dd>
+          <dt>Baud rate</dt><dd>The agreed transmission speed, in bits per second.</dd>
+          <dt>BRR</dt><dd>Baud Rate Register — divides the peripheral clock down to the target baud rate.</dd>
+          <dt>Start / stop bit</dt><dd>Framing bits that mark the beginning and end of a byte on an otherwise idle-high line.</dd>
+          <dt>8N1</dt><dd>8 data bits, no parity bit, 1 stop bit — the standard UART frame format used in this course.</dd>
+          <dt>Tx / Rx</dt><dd>Transmit / Receive — the two data lines used in UART.</dd>
+          <dt>FIFO</dt><dd>First In, First Out — the small hardware queue that buffers bytes before they reach the CPU.</dd>
+          <dt>Threshold</dt><dd>The FIFO fill/drain level at which an interrupt is triggered, instead of on every byte.</dd>
+          <dt>Ring buffer</dt><dd>A fixed-size array in RAM with wrapping head/tail indices, used to buffer far more data than the hardware FIFO can hold.</dd>
+          <dt>Head / tail</dt><dd>The write index / read index of a ring buffer.</dd>
+          <dt>Overrun (ORE)</dt><dd>An error flag set when a new byte overwrites one that hasn't been read yet.</dd>
+          <dt>ISR</dt><dd>Interrupt Service Routine — the function that runs when a hardware interrupt fires. Also the name of USART's own status register — context tells them apart.</dd>
+          <dt>NVIC</dt><dd>Nested Vectored Interrupt Controller — the chip-wide controller that must be told to let a peripheral's interrupt through.</dd>
+          <dt>AFR / MODER</dt><dd>GPIO registers that select a pin's alternate function and overall mode (input/output/AF/analog).</dd>
+        </dl>
+      </section>
+
+      <footer class="pagefoot">
+        ENGE X200 · Microcontroller Programming · Lecture 6, Serial Communication — study notes distilled from the lecture slide deck for self-review. Register bit positions and code shown match the worked servo-control example from the lecture.
+      </footer>
+
+    </div>
+  </main>
+</div>
+
+<script>
+(function(){
+"use strict";
+
+/* ---------------------------------------------------------------
+   MOBILE NAV TOGGLE
+--------------------------------------------------------------- */
+var navToggle = document.getElementById('navToggle');
+var sidebar = document.getElementById('sidebar');
+navToggle.addEventListener('click', function(){
+  document.body.classList.toggle('nav-open');
+});
+document.addEventListener('click', function(e){
+  if(!document.body.classList.contains('nav-open')) return;
+  if(sidebar.contains(e.target) || navToggle.contains(e.target)) return;
+  document.body.classList.remove('nav-open');
+});
+document.querySelectorAll('.navlink').forEach(function(a){
+  a.addEventListener('click', function(){ document.body.classList.remove('nav-open'); });
+});
+
+/* ---------------------------------------------------------------
+   SCROLLSPY
+--------------------------------------------------------------- */
+var sections = Array.prototype.slice.call(document.querySelectorAll('.section[id]'));
+var navlinks = Array.prototype.slice.call(document.querySelectorAll('.navlink'));
+function setActive(id){
+  navlinks.forEach(function(a){
+    a.classList.toggle('active', a.getAttribute('href') === '#' + id);
+  });
+}
+if('IntersectionObserver' in window){
+  var io = new IntersectionObserver(function(entries){
+    entries.forEach(function(entry){
+      if(entry.isIntersecting) setActive(entry.target.id);
+    });
+  }, { rootMargin: '-35% 0px -55% 0px', threshold: 0 });
+  sections.forEach(function(s){ io.observe(s); });
+}
+
+/* ---------------------------------------------------------------
+   CODE PANEL TABS
+--------------------------------------------------------------- */
+document.querySelectorAll('.codepanel').forEach(function(panelGroup){
+  var tabs = panelGroup.querySelectorAll('.codepanel__tab');
+  var panels = panelGroup.querySelectorAll('.codepanel__panel');
+  tabs.forEach(function(tab){
+    tab.addEventListener('click', function(){
+      tabs.forEach(function(t){ t.classList.remove('active'); });
+      panels.forEach(function(p){ p.classList.remove('active'); });
+      tab.classList.add('active');
+      var name = tab.getAttribute('data-tab');
+      panelGroup.querySelector('.codepanel__panel[data-panel="'+name+'"]').classList.add('active');
+    });
+  });
+});
+
+/* ---------------------------------------------------------------
+   REGISTER BIT FIELD BUILDER
+--------------------------------------------------------------- */
+function buildRegField(containerId, bitMap){
+  var el = document.getElementById(containerId);
+  if(!el) return;
+  var html = '';
+  for(var bit = 31; bit >= 0; bit--){
+    var info = bitMap[bit];
+    var cls = 'regfield__bit';
+    var name = 'Res';
+    if(info){
+      cls += info.cls ? (' ' + info.cls) : ' on';
+      name = info.name;
+    }
+    html += '<div class="'+cls+'"><span class="regfield__num">'+bit+'</span><span class="regfield__name">'+name+'</span></div>';
+  }
+  el.innerHTML = html;
+}
+
+buildRegField('cr1Field', {
+  29: {name:'FIFOEN'},
+  28: {name:'M1'},
+  12: {name:'M0'},
+  7:  {name:'TXEIE'},
+  5:  {name:'RXNEIE'},
+  3:  {name:'TE'},
+  2:  {name:'RE'},
+  0:  {name:'UE'}
+});
+
+buildRegField('cr3Field', {
+  31: {name:'TXFTCFG[2]', cls:'on2'},
+  30: {name:'TXFTCFG[1]', cls:'on2'},
+  29: {name:'TXFTCFG[0]', cls:'on2'},
+  28: {name:'RXFTIE'},
+  27: {name:'RXFTCFG[2]', cls:'on2'},
+  26: {name:'RXFTCFG[1]', cls:'on2'},
+  25: {name:'RXFTCFG[0]', cls:'on2'},
+  23: {name:'TXFTIE'}
+});
+
+/* ---------------------------------------------------------------
+   BAUD RATE CALCULATOR
+--------------------------------------------------------------- */
+var baudFclk = document.getElementById('baudFclk');
+var baudSelect = document.getElementById('baudSelect');
+var baudCustomWrap = document.getElementById('baudCustomWrap');
+var baudCustom = document.getElementById('baudCustom');
+var statBRR = document.getElementById('statBRR');
+var statActual = document.getElementById('statActual');
+var statBitTime = document.getElementById('statBitTime');
+var statError = document.getElementById('statError');
+
+function recalcBaud(){
+  var fclkMHz = parseFloat(baudFclk.value);
+  var baud = baudSelect.value === 'custom' ? parseFloat(baudCustom.value) : parseFloat(baudSelect.value);
+  if(!fclkMHz || !baud || fclkMHz <= 0 || baud <= 0){
+    statBRR.textContent = '—'; statActual.textContent = '—';
+    statBitTime.textContent = '—'; statError.textContent = '—';
+    return;
+  }
+  var fclk = fclkMHz * 1e6;
+  var brr = Math.round(fclk / baud);
+  var actual = fclk / brr;
+  var bitTimeUs = (1 / actual) * 1e6;
+  var errorPct = ((actual - baud) / baud) * 100;
+
+  statBRR.textContent = brr.toLocaleString();
+  statActual.textContent = actual.toFixed(1) + ' bps';
+  statBitTime.textContent = bitTimeUs.toFixed(2) + ' µs';
+  statError.textContent = (errorPct >= 0 ? '+' : '') + errorPct.toFixed(2) + '%';
+  statError.style.color = Math.abs(errorPct) > 2 ? 'var(--red)' : 'var(--amber)';
+}
+baudFclk.addEventListener('input', recalcBaud);
+baudCustom.addEventListener('input', recalcBaud);
+baudSelect.addEventListener('change', function(){
+  baudCustomWrap.style.display = baudSelect.value === 'custom' ? 'flex' : 'none';
+  recalcBaud();
+});
+recalcBaud();
+
+/* ---------------------------------------------------------------
+   FRAME (WAVEFORM) BUILDER
+--------------------------------------------------------------- */
+var frameHex = document.getElementById('frameHex');
+var frameDec = document.getElementById('frameDec');
+var frameWave = document.getElementById('frameWave');
+var frameSendBtn = document.getElementById('frameSendBtn');
+var frameResetBtn = document.getElementById('frameResetBtn');
+var frameLineState = document.getElementById('frameLineState');
+var frameBitsReceived = document.getElementById('frameBitsReceived');
+var frameAssembled = document.getElementById('frameAssembled');
+var frameTimer = null;
+
+function segmentsFor(byteVal){
+  var segs = [{key:'idle0', label:'Idle', level:1}];
+  segs.push({key:'start', label:'Start', level:0});
+  for(var i = 0; i < 8; i++){
+    var bit = (byteVal >> i) & 1;
+    segs.push({key:'b'+i, label:'B'+i, level:bit, bitIndex:i});
+  }
+  segs.push({key:'stop', label:'Stop', level:1});
+  segs.push({key:'idle1', label:'Idle', level:1});
+  return segs;
+}
+
+function renderWave(byteVal, currentIdx){
+  var segs = segmentsFor(byteVal);
+  var html = '';
+  segs.forEach(function(seg, i){
+    var lvlCls = seg.level ? 'hi' : 'lo';
+    var cur = (typeof currentIdx === 'number' && i === currentIdx) ? ' current' : '';
+    html += '<div class="wcell">' +
+              '<div class="wcell__lvl '+lvlCls+cur+'">'+(seg.level ? 'HIGH' : 'LOW')+'</div>' +
+              '<div class="wcell__lbl"><b>'+seg.label+'</b>'+(seg.bitIndex!==undefined ? ('='+seg.level) : '')+'</div>' +
+            '</div>';
+  });
+  frameWave.innerHTML = html;
+}
+
+function getByteValue(){
+  var v = parseInt(frameHex.value, 16);
+  if(isNaN(v)) v = 0;
+  return Math.max(0, Math.min(255, v));
+}
+function syncFromHex(){
+  var v = getByteValue();
+  frameDec.value = v;
+  renderWave(v);
+}
+function syncFromDec(){
+  var v = parseInt(frameDec.value, 10);
+  if(isNaN(v)) v = 0;
+  v = Math.max(0, Math.min(255, v));
+  frameHex.value = v.toString(16).toUpperCase().padStart(2,'0');
+  renderWave(v);
+}
+frameHex.addEventListener('input', function(){
+  frameHex.value = frameHex.value.replace(/[^0-9a-fA-F]/g,'').slice(0,2);
+  syncFromHex();
+});
+frameDec.addEventListener('input', syncFromDec);
+
+function playFrame(){
+  if(frameTimer) return;
+  var byteVal = getByteValue();
+  var segs = segmentsFor(byteVal);
+  var bitsDisplay = '--------';
+  frameBitsReceived.textContent = bitsDisplay;
+  frameAssembled.textContent = '—';
+  frameSendBtn.disabled = true;
+  var i = 0;
+  var bitsArr = bitsDisplay.split('');
+
+  function step(){
+    if(i >= segs.length){
+      frameTimer = null;
+      frameSendBtn.disabled = false;
+      renderWave(byteVal);
+      frameLineState.textContent = 'IDLE (high)';
+      var assembled = 0;
+      for(var k=0;k<8;k++){ if(bitsArr[k]==='1') assembled |= (1<<k); }
+      frameAssembled.textContent = '0x'+assembled.toString(16).toUpperCase().padStart(2,'0')+'  ('+assembled+')';
+      return;
+    }
+    var seg = segs[i];
+    renderWave(byteVal, i);
+    if(seg.key === 'start') frameLineState.textContent = 'LOW — start bit detected';
+    else if(seg.key === 'stop') frameLineState.textContent = 'HIGH — stop bit';
+    else if(seg.bitIndex !== undefined){
+      frameLineState.textContent = (seg.level ? 'HIGH' : 'LOW') + ' — sampling bit ' + seg.bitIndex;
+      bitsArr[seg.bitIndex] = String(seg.level);
+      frameBitsReceived.textContent = bitsArr.join('');
+    } else {
+      frameLineState.textContent = 'IDLE (high)';
+    }
+    i++;
+    frameTimer = setTimeout(step, 480);
+  }
+  step();
+}
+frameSendBtn.addEventListener('click', playFrame);
+frameResetBtn.addEventListener('click', function(){
+  if(frameTimer){ clearTimeout(frameTimer); frameTimer = null; }
+  frameSendBtn.disabled = false;
+  frameHex.value = '0A'; frameDec.value = 10;
+  renderWave(10);
+  frameLineState.textContent = 'IDLE (high)';
+  frameBitsReceived.textContent = '--------';
+  frameAssembled.textContent = '—';
+});
+renderWave(10); // default: 0x0A, matches the lecture's own example
+
+/* ---------------------------------------------------------------
+   RING BUFFER SIMULATOR
+--------------------------------------------------------------- */
+var RING_N = 8;
+var ringBuf = new Array(RING_N).fill(null);
+var ringHead = 0, ringTail = 0;
+var ringCells = document.getElementById('ringCells');
+var ringHeadVal = document.getElementById('ringHeadVal');
+var ringTailVal = document.getElementById('ringTailVal');
+var ringStatus = document.getElementById('ringStatus');
+var ringStatusTimer = null;
+
+function ringConditionText(){
+  if(ringHead === ringTail) return 'empty';
+  if((ringHead + 1) % RING_N === ringTail) return 'full (1 slot reserved)';
+  return 'has data';
+}
+function setRingStatus(msg, color){
+  ringStatus.textContent = msg;
+  ringStatus.style.color = color || '#fff';
+  if(ringStatusTimer) clearTimeout(ringStatusTimer);
+  ringStatusTimer = setTimeout(function(){
+    ringStatus.textContent = ringConditionText();
+    ringStatus.style.color = '#fff';
+  }, 1300);
+}
+function renderRing(){
+  var html = '';
+  for(var i = 0; i < RING_N; i++){
+    var filled = ringBuf[i] !== null;
+    var boxCls = 'ringcell__box' + (filled ? ' filled' : '') + (i===ringHead ? ' head' : '') + (i===ringTail ? ' tail' : '');
+    var ptrs = '';
+    if(i === ringHead) ptrs += '<span class="ptrtag head">head</span>';
+    if(i === ringTail) ptrs += '<span class="ptrtag tail">tail</span>';
+    html += '<div class="ringcell">' +
+              '<div class="'+boxCls+'">'+(filled ? ringBuf[i] : '')+'</div>' +
+              '<div class="ringcell__idx">['+i+']</div>' +
+              '<div class="ringcell__ptrs">'+ptrs+'</div>' +
+            '</div>';
+  }
+  ringCells.innerHTML = html;
+  ringHeadVal.textContent = ringHead;
+  ringTailVal.textContent = ringTail;
+  ringStatus.textContent = ringConditionText();
+  ringStatus.style.color = '#fff';
+}
+document.getElementById('ringWriteBtn').addEventListener('click', function(){
+  var next = (ringHead + 1) % RING_N;
+  if(next === ringTail){
+    setRingStatus('buffer full — write refused!', 'var(--red)');
+    return;
+  }
+  ringBuf[ringHead] = Math.floor(Math.random() * 256);
+  ringHead = next;
+  renderRing();
+  setRingStatus('wrote 1 byte', 'var(--green)');
+});
+document.getElementById('ringReadBtn').addEventListener('click', function(){
+  if(ringHead === ringTail){
+    setRingStatus('buffer empty — nothing to read', 'var(--red)');
+    return;
+  }
+  var val = ringBuf[ringTail];
+  ringBuf[ringTail] = null;
+  ringTail = (ringTail + 1) % RING_N;
+  renderRing();
+  setRingStatus('read: ' + val, 'var(--teal)');
+});
+document.getElementById('ringResetBtn').addEventListener('click', function(){
+  ringBuf = new Array(RING_N).fill(null);
+  ringHead = 0; ringTail = 0;
+  renderRing();
+});
+renderRing();
+
+})();
+</script>
+</body>
+</html>

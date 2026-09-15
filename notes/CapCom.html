@@ -1,0 +1,1460 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Capture/Compare &amp; PWM — ENGE X200 Interactive Notes</title>
+<style>
+/* ============================================================
+   DESIGN TOKENS
+   ============================================================ */
+:root{
+  --bg:        #0A0E14;
+  --panel:     #10161F;
+  --panel-2:   #151D29;
+  --raised:    #1B2432;
+  --border:    #263140;
+  --border-lo: #1B2330;
+  --text:      #E9EEF5;
+  --text-dim:  #93A2B8;
+  --text-mute: #5D6B80;
+  --amber:     #FFB300;
+  --amber-dim: #7A5A10;
+  --amber-glow: rgba(255,179,0,.35);
+  --teal:      #4FD8CE;
+  --teal-dim:  #123B38;
+  --violet:    #C792EA;
+  --green:     #46D18A;
+  --red:       #FF6B6B;
+  --display: 'Century Gothic','Avenir Next','Segoe UI',sans-serif;
+  --sans:    'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;
+  --mono:    'SFMono-Regular',Consolas,'Roboto Mono','Liberation Mono',Menlo,monospace;
+  --radius:  10px;
+  --maxw:    780px;
+}
+*,*::before,*::after{ box-sizing:border-box; }
+html{ scroll-behavior:smooth; }
+body{
+  margin:0; background:var(--bg); color:var(--text);
+  font-family:var(--sans); font-size:16px; line-height:1.65;
+  -webkit-font-smoothing:antialiased;
+}
+@media (prefers-reduced-motion: reduce){
+  html{ scroll-behavior:auto; }
+  *{ animation-duration:0.001ms !important; animation-iteration-count:1 !important; transition-duration:0.001ms !important; }
+}
+h1,h2,h3,h4{ font-family:var(--display); font-weight:700; color:#fff; line-height:1.15; margin:0 0 .5em 0; }
+p{ margin:0 0 1em 0; }
+a{ color:var(--amber); }
+code,.mono{ font-family:var(--mono); }
+::selection{ background:var(--amber-glow); color:#fff; }
+::-webkit-scrollbar{ width:10px; height:10px; }
+::-webkit-scrollbar-track{ background:var(--bg); }
+::-webkit-scrollbar-thumb{ background:#28303e; border-radius:6px; }
+
+/* LAYOUT */
+.layout{ display:grid; grid-template-columns:272px 1fr; min-height:100vh; }
+.sidebar{ position:sticky; top:0; height:100vh; overflow-y:auto; background:var(--panel); border-right:1px solid var(--border-lo); padding:22px 18px 40px; }
+.brand{ display:flex; align-items:center; gap:10px; padding-bottom:16px; margin-bottom:14px; border-bottom:1px solid var(--border-lo); }
+.brand__chip{ width:34px; height:34px; border-radius:7px; background:linear-gradient(155deg,#1c2431,#0d121a); border:1px solid var(--border); display:flex; align-items:center; justify-content:center; font-family:var(--mono); font-size:11px; color:var(--amber); font-weight:700; }
+.brand__text{ font-size:13px; line-height:1.3; color:var(--text-dim); }
+.brand__text b{ color:#fff; display:block; font-size:14px; font-family:var(--display); }
+.navpart{ margin:20px 0 4px; }
+.navpart__num{ font-family:var(--mono); font-size:11px; color:var(--text-mute); letter-spacing:.06em; }
+.navpart__title{ font-size:12.5px; color:var(--text-dim); margin-top:2px; font-weight:600; }
+.navlist{ list-style:none; margin:8px 0 0; padding:0; }
+.navlist li{ margin:1px 0; }
+.navlink{ display:block; padding:6px 10px; border-radius:7px; color:var(--text-dim); text-decoration:none; font-size:13.5px; border-left:2px solid transparent; transition:background .15s ease,color .15s ease; }
+.navlink:hover{ background:var(--panel-2); color:#fff; }
+.navlink.active{ color:var(--amber); background:rgba(255,179,0,.08); border-left:2px solid var(--amber); }
+.sidebar-toggle{ display:none; position:fixed; top:14px; left:14px; z-index:50; width:42px; height:42px; border-radius:9px; background:var(--panel-2); border:1px solid var(--border); color:var(--text); align-items:center; justify-content:center; cursor:pointer; }
+.sidebar-toggle svg{ width:18px; height:18px; }
+main{ min-width:0; }
+.main-inner{ max-width:var(--maxw); margin:0 auto; padding:64px 28px 120px; }
+.wide{ max-width:960px; }
+.section{ scroll-margin-top:24px; padding-top:56px; }
+.section:first-of-type{ padding-top:0; }
+.eyebrow{ font-family:var(--mono); font-size:12px; color:var(--amber); letter-spacing:.08em; margin-bottom:10px; display:flex; align-items:center; gap:8px; }
+.eyebrow::before{ content:''; width:18px; height:1px; background:var(--amber-dim); }
+.section h2{ font-size:clamp(26px,3.4vw,34px); max-width:20ch; }
+.lede{ font-size:18px; color:var(--text-dim); max-width:58ch; }
+
+/* HERO */
+.hero{ padding-top:8px; }
+.hero__kicker{ font-family:var(--mono); font-size:12.5px; color:var(--text-mute); letter-spacing:.1em; margin-bottom:18px; }
+.hero h1{ font-size:clamp(38px,6.6vw,60px); letter-spacing:-.02em; margin-bottom:14px;}
+.hero h1 span{ color:var(--amber); }
+.hero__sub{ font-size:19px; color:var(--text-dim); max-width:56ch; margin-bottom:30px; }
+.hero__meta{ display:flex; gap:22px; flex-wrap:wrap; font-size:13px; color:var(--text-mute); font-family:var(--mono); margin-bottom:34px; }
+.hero__meta b{ color:var(--text); }
+
+/* GENERIC COMPONENTS */
+.card{ background:var(--panel-2); border:1px solid var(--border); border-radius:var(--radius); padding:20px 22px; }
+.callout{ border-left:3px solid var(--amber); background:linear-gradient(90deg, rgba(255,179,0,.09), transparent 60%); padding:14px 18px; border-radius:0 8px 8px 0; margin:20px 0; font-size:15px; }
+.callout.teal{ border-left-color:var(--teal); background:linear-gradient(90deg, rgba(79,216,206,.10), transparent 60%); }
+.callout.red{ border-left-color:var(--red); background:linear-gradient(90deg, rgba(255,107,107,.10), transparent 60%); }
+.callout.violet{ border-left-color:var(--violet); background:linear-gradient(90deg, rgba(199,146,234,.10), transparent 60%); }
+.callout b{ color:#fff; }
+.callout__label{ font-family:var(--mono); font-size:11px; text-transform:uppercase; letter-spacing:.08em; color:var(--amber); display:block; margin-bottom:5px; }
+.callout.teal .callout__label{ color:var(--teal); }
+.callout.red .callout__label{ color:var(--red); }
+.callout.violet .callout__label{ color:var(--violet); }
+
+.grid2{ display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+.grid3{ display:grid; grid-template-columns:repeat(3,1fr); gap:14px; }
+@media (max-width:760px){ .grid2,.grid3{ grid-template-columns:1fr; } }
+
+.taglist{ display:flex; flex-wrap:wrap; gap:8px; margin:12px 0; padding:0; list-style:none; }
+.tag{ font-family:var(--mono); font-size:12px; padding:4px 10px; border-radius:20px; background:var(--panel-2); border:1px solid var(--border); color:var(--text-dim); }
+
+pre{ background:#0D1219; border:1px solid var(--border); border-radius:10px; padding:16px 18px; overflow-x:auto; font-size:13.3px; line-height:1.55; margin:16px 0; }
+.tok-kw{ color:#C792EA; } .tok-type{ color:#4FD8CE; } .tok-num{ color:#F78C6C; }
+.tok-com{ color:#5D6B80; font-style:italic; } .tok-str{ color:#C3E88D; }
+.tok-fn{ color:#82AAFF; } .tok-amber{ color:var(--amber); }
+.codepanel{ border:1px solid var(--border); border-radius:10px; overflow:hidden; margin:18px 0; background:#0D1219; }
+.codepanel__tabs{ display:flex; background:var(--panel-2); border-bottom:1px solid var(--border); overflow-x:auto; }
+.codepanel__tab{ font-family:var(--mono); font-size:12px; padding:9px 16px; color:var(--text-dim); cursor:pointer; white-space:nowrap; border-bottom:2px solid transparent; }
+.codepanel__tab.active{ color:var(--amber); border-bottom:2px solid var(--amber); background:rgba(255,179,0,.05); }
+.codepanel__panel{ display:none; }
+.codepanel__panel.active{ display:block; }
+.codepanel__panel pre{ margin:0; border:none; border-radius:0; }
+
+.steps{ counter-reset:stepnum; margin:22px 0; }
+.step{ position:relative; padding:2px 0 22px 40px; border-left:1px solid var(--border); margin-left:14px; }
+.step:last-child{ border-left:1px solid transparent; padding-bottom:2px; }
+.step::before{ counter-increment:stepnum; content:counter(stepnum); position:absolute; left:-14px; top:0; width:28px; height:28px; border-radius:50%; background:var(--raised); border:1px solid var(--amber-dim); color:var(--amber); font-family:var(--mono); font-size:13px; font-weight:700; display:flex; align-items:center; justify-content:center; }
+.step h4{ font-size:15.5px; margin-bottom:4px; }
+.step p{ font-size:14.5px; color:var(--text-dim); margin-bottom:8px; }
+
+.regfield{ display:flex; flex-wrap:wrap; margin:14px 0; border:1px solid var(--border); border-radius:8px; overflow:hidden; }
+.regfield__bit{ flex:1 1 auto; min-width:34px; text-align:center; font-family:var(--mono); font-size:11px; padding:8px 2px; border-right:1px solid var(--border); color:var(--text-mute); }
+.regfield__bit:last-child{ border-right:none; }
+.regfield__bit.on{ color:var(--amber); background:rgba(255,179,0,.09); font-weight:700; }
+
+.glossary dt{ font-family:var(--mono); color:var(--amber); font-size:14px; margin-top:14px; }
+.glossary dd{ margin:4px 0 0; color:var(--text-dim); font-size:14.5px; }
+
+.btn{ font-family:var(--sans); font-size:13.5px; font-weight:600; padding:9px 16px; border-radius:8px; border:1px solid var(--border); background:var(--raised); color:var(--text); cursor:pointer; transition:border-color .15s ease,filter .15s ease; }
+.btn:hover{ border-color:var(--amber-dim); }
+.btn:active{ transform:scale(.97); }
+.btn.primary{ background:var(--amber); color:#241900; border-color:var(--amber); }
+.btn.primary:hover{ filter:brightness(1.08); }
+.btn.ghost{ background:transparent; }
+.btn.teal{ background:var(--teal); color:#062521; border-color:var(--teal); }
+.btn:disabled{ opacity:.4; cursor:not-allowed; }
+.btnrow{ display:flex; gap:10px; flex-wrap:wrap; margin:16px 0; align-items:center; }
+
+.fieldrow{ display:flex; gap:18px; flex-wrap:wrap; align-items:flex-end; margin:16px 0; }
+.field{ display:flex; flex-direction:column; gap:6px; }
+.field label{ font-family:var(--mono); font-size:11.5px; color:var(--text-mute); letter-spacing:.03em; }
+.field input[type=number],.field select{ background:var(--raised); border:1px solid var(--border); color:var(--text); padding:8px 10px; border-radius:7px; font-family:var(--mono); font-size:14px; width:130px; }
+.field input[type=range]{ width:220px; accent-color:var(--amber); }
+
+.widget{ background:var(--panel-2); border:1px solid var(--border); border-radius:12px; padding:20px 22px; margin:20px 0; }
+.widget__title{ display:flex; align-items:center; gap:8px; font-family:var(--mono); font-size:12.5px; color:var(--text-dim); text-transform:uppercase; letter-spacing:.06em; margin-bottom:14px; }
+.widget__title .dot{ width:7px; height:7px; border-radius:50%; background:var(--green); }
+
+.led{ display:inline-block; width:16px; height:16px; border-radius:50%; background:#2a1010; border:1px solid #4a1a1a; vertical-align:middle; }
+.led.on{ background:var(--red); border-color:#ff9999; box-shadow:0 0 14px 4px rgba(255,107,107,.45); }
+.led.amber-led{ background:#3a2c10; border-color:#5c4a1a; }
+.led.amber-led.on{ background:var(--amber); border-color:#ffd166; box-shadow:0 0 14px 4px var(--amber-glow), inset 0 0 6px rgba(255,255,255,.5); }
+
+.readout{ font-family:var(--mono); font-weight:700; color:var(--amber); background:var(--raised); border:1px solid var(--border); border-radius:7px; padding:4px 10px; display:inline-block; }
+.progress{ height:8px; border-radius:5px; background:var(--raised); overflow:hidden; }
+.progress__fill{ height:100%; background:linear-gradient(90deg,var(--teal),var(--amber)); width:0%; transition:width .15s linear; }
+.statrow{ display:flex; gap:26px; flex-wrap:wrap; margin-top:14px; }
+.stat{ font-size:13px; color:var(--text-mute); }
+.stat b{ display:block; color:#fff; font-family:var(--mono); font-size:17px; }
+
+.bitreg{ display:flex; gap:5px; margin:14px 0; flex-wrap:wrap; }
+.bitbox{ width:34px; height:34px; display:flex; align-items:center; justify-content:center; border:1px solid var(--border); border-radius:6px; font-family:var(--mono); font-weight:700; color:var(--text-mute); background:var(--raised); font-size:13px; transition:all .15s ease; }
+.bitbox.hi{ color:var(--green); border-color:#1c5c3c; background:rgba(70,209,138,.08); }
+.bitbox.lo{ color:var(--red); border-color:#5c1a1a; background:#1a0d0d; }
+.bitbox.flag{ outline:2px solid var(--amber); }
+.timeline{ display:flex; gap:5px; margin:14px 0; flex-wrap:wrap; }
+.tick{ width:22px; height:44px; border:1px solid var(--border); border-radius:4px; background:var(--raised); display:flex; align-items:flex-end; }
+.tick.hi{ background:linear-gradient(0deg, rgba(70,209,138,.35), transparent); border-color:#1c5c3c; }
+.tick.lo{ background:linear-gradient(0deg, rgba(255,107,107,.35), transparent); border-color:#5c1a1a; }
+.tick.current{ outline:2px solid var(--amber); }
+
+.table-wrap{ overflow-x:auto; margin:16px 0; }
+table.regtable{ border-collapse:collapse; width:100%; font-size:13.5px; }
+table.regtable th,table.regtable td{ border:1px solid var(--border); padding:8px 10px; text-align:left; }
+table.regtable th{ background:var(--panel-2); color:#fff; font-family:var(--mono); font-size:12px; text-transform:uppercase; letter-spacing:.03em; }
+table.regtable td{ color:var(--text-dim); }
+table.regtable td.mono, table.regtable td code{ font-family:var(--mono); color:var(--amber); }
+table.regtable tr:nth-child(even) td{ background:rgba(255,255,255,.015); }
+
+.modebtns{ display:flex; flex-wrap:wrap; gap:8px; margin:14px 0; }
+.modebtn{ font-family:var(--mono); font-size:12.5px; padding:8px 12px; border-radius:7px; border:1px solid var(--border); background:var(--raised); color:var(--text-dim); cursor:pointer; }
+.modebtn.active{ color:#241900; background:var(--amber); border-color:var(--amber); font-weight:700; }
+
+.quiz-q{ border:1px solid var(--border); background:var(--panel-2); border-radius:12px; padding:18px 20px; margin:16px 0; }
+.quiz-q .qnum{ font-family:var(--mono); font-size:11.5px; color:var(--text-mute); margin-bottom:6px; }
+.quiz-q .qtext{ font-size:15px; font-weight:600; color:#fff; margin-bottom:12px; }
+.quiz-opt{ display:block; width:100%; text-align:left; padding:10px 14px; margin:6px 0; border-radius:8px; border:1px solid var(--border); background:var(--raised); color:var(--text); font-size:14px; cursor:pointer; }
+.quiz-opt:hover{ border-color:var(--amber-dim); }
+.quiz-opt.correct{ border-color:var(--green); background:rgba(70,209,138,.12); color:var(--green); }
+.quiz-opt.wrong{ border-color:var(--red); background:rgba(255,107,107,.12); color:var(--red); }
+.quiz-opt:disabled{ cursor:default; }
+.quiz-exp{ font-size:13.5px; color:var(--text-dim); margin-top:10px; padding-top:10px; border-top:1px solid var(--border-lo); display:none; }
+.quiz-score{ font-family:var(--mono); font-size:14px; color:var(--amber); margin-top:14px; }
+
+.needle-wrap{ display:flex; align-items:center; gap:28px; flex-wrap:wrap; }
+.cheat-highlight{ background:rgba(255,179,0,.06); }
+
+footer.foot{ margin-top:80px; padding-top:24px; border-top:1px solid var(--border-lo); font-size:12.5px; color:var(--text-mute); font-family:var(--mono); }
+
+@media (max-width:920px){
+  .layout{ grid-template-columns:1fr; }
+  .sidebar{ position:fixed; left:0; top:0; z-index:40; width:270px; transform:translateX(-100%); transition:transform .2s ease; box-shadow:20px 0 40px rgba(0,0,0,.5); }
+  .sidebar.open{ transform:translateX(0); }
+  .sidebar-toggle{ display:flex; }
+  .main-inner{ padding:84px 20px 100px; }
+}
+</style>
+</head>
+<body>
+<button class="sidebar-toggle" id="navToggle" aria-label="Toggle contents menu">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+</button>
+<div class="layout">
+  <nav class="sidebar" id="sidebar">
+    <div class="brand">
+      <div class="brand__chip">CC</div>
+      <div class="brand__text"><b>Capture / Compare</b>ENGE X200 · Lecture 5</div>
+    </div>
+
+    <div class="navpart">
+      <div class="navpart__num">PART 01</div>
+      <div class="navpart__title">Foundations</div>
+      <ul class="navlist">
+        <li><a class="navlink" href="#outcomes">Learning outcomes</a></li>
+        <li><a class="navlink" href="#motivation">Why this matters</a></li>
+        <li><a class="navlink" href="#capture">What is Capture?</a></li>
+        <li><a class="navlink" href="#compare">What is Compare?</a></li>
+      </ul>
+    </div>
+
+    <div class="navpart">
+      <div class="navpart__num">PART 02</div>
+      <div class="navpart__title">Pulse Width Modulation</div>
+      <ul class="navlist">
+        <li><a class="navlink" href="#pwm-basics">PWM basics</a></li>
+        <li><a class="navlink" href="#pwm-formulas">PWM formulas</a></li>
+        <li><a class="navlink" href="#worked-example">Worked example</a></li>
+      </ul>
+    </div>
+
+    <div class="navpart">
+      <div class="navpart__num">PART 03</div>
+      <div class="navpart__title">Hardware &amp; Registers</div>
+      <ul class="navlist">
+        <li><a class="navlink" href="#hardware-pins">GPIO pins &amp; timers</a></li>
+        <li><a class="navlink" href="#registers">CapCom registers</a></li>
+        <li><a class="navlink" href="#ocxm-modes">Output compare modes</a></li>
+      </ul>
+    </div>
+
+    <div class="navpart">
+      <div class="navpart__num">PART 04</div>
+      <div class="navpart__title">Building It</div>
+      <ul class="navlist">
+        <li><a class="navlink" href="#putting-together">Putting it together</a></li>
+        <li><a class="navlink" href="#preload">Preload &amp; glitch-free PWM</a></li>
+      </ul>
+    </div>
+
+    <div class="navpart">
+      <div class="navpart__num">PART 05</div>
+      <div class="navpart__title">Case studies</div>
+      <ul class="navlist">
+        <li><a class="navlink" href="#servo-case">Servo motor sweep</a></li>
+        <li><a class="navlink" href="#button-case">Button-controlled servo</a></li>
+      </ul>
+    </div>
+
+    <div class="navpart">
+      <div class="navpart__num">PART 06</div>
+      <div class="navpart__title">Wrap-up</div>
+      <ul class="navlist">
+        <li><a class="navlink" href="#cheatsheet">Cheat sheet</a></li>
+        <li><a class="navlink" href="#quiz">Quick check</a></li>
+      </ul>
+    </div>
+  </nav>
+
+  <main>
+    <div class="main-inner">
+
+      <section class="hero section" id="top">
+        <div class="hero__kicker">ENGE X200 · MICROCONTROLLER PROGRAMMING · LECTURE 5</div>
+        <h1>Capture / Compare<br><span>&amp; PWM, explained from zero</span></h1>
+        <p class="hero__sub">Every timer chip has a secret weapon hiding inside it: a little module called <b>Capture/Compare</b>. It's the thing that lets a microcontroller measure the exact moment something happens in the real world, and the thing that lets it generate perfectly-timed signals to control motors, LEDs and more. This is a from-scratch, no-assumptions walkthrough — built to be read by someone who has never seen a datasheet before, but who wants to understand it the way a third-year embedded systems student would.</p>
+        <div class="hero__meta">
+          <span><b>41</b> slides distilled</span>
+          <span><b>3</b> learning outcomes</span>
+          <span>Chip: <b>STM32C031C6</b> (Nucleo board)</span>
+          <span>Reference manual: <b>RM0490</b></span>
+        </div>
+      </section>
+
+      <section class="section" id="outcomes">
+        <div class="eyebrow">Where we're headed</div>
+        <h2>Learning outcomes</h2>
+        <p class="lede">By the end of this lecture (and these notes) you should be able to do three things. Everything below is organised around getting you there.</p>
+        <div class="grid3" style="margin-top:20px;">
+          <div class="card">
+            <div class="callout__label" style="color:var(--amber);">LO1</div>
+            <b style="color:#fff;">Understand Capture &amp; Compare events</b>
+            <p style="margin:8px 0 0;font-size:14.5px;">What it actually means for a timer to "capture" something, and what it means for it to "compare" something — and why these are two sides of the same coin.</p>
+          </div>
+          <div class="card">
+            <div class="callout__label" style="color:var(--teal);">LO2</div>
+            <b style="color:#fff;">Link GPIO pins to timers</b>
+            <p style="margin:8px 0 0;font-size:14.5px;">How a plain digital I/O pin gets "wired" internally to a timer peripheral through alternate function registers — so the timer can actually see or drive that physical pin.</p>
+          </div>
+          <div class="card">
+            <div class="callout__label" style="color:var(--violet);">LO3</div>
+            <b style="color:#fff;">Generate PWM signals</b>
+            <p style="margin:8px 0 0;font-size:14.5px;">How to turn a timer into a signal generator with a controllable frequency and duty cycle — enough to drive a servo motor by the end of the lecture.</p>
+          </div>
+        </div>
+      </section>
+
+      <section class="section" id="motivation">
+        <div class="eyebrow">Motivation</div>
+        <h2>Why does a self-driving car need any of this?</h2>
+        <p class="lede">Picture a self-driving car. It constantly has to answer three questions: <i>when do I stop?</i>, <i>how fast am I going?</i>, and <i>which way do I turn?</i> Every one of those questions comes down to the same two jobs, repeated thousands of times a second.</p>
+        <div class="grid2" style="margin-top:18px;">
+          <div class="card">
+            <b style="color:var(--teal);">📥 Input Capture</b>
+            <p style="margin:8px 0 0;font-size:14.5px;">Reading the physical world through sensors, and feeding that into the microcontroller. A LiDAR sensor, an ultrasonic sensor, a wheel encoder — all of these send pulses that the chip needs to time precisely.</p>
+          </div>
+          <div class="card">
+            <b style="color:var(--amber);">📤 Output Compare</b>
+            <p style="margin:8px 0 0;font-size:14.5px;">Controlling the physical world through actuators. Commands to steering motors, the accelerator, the brakes — all of these are signals the chip needs to generate at precise moments.</p>
+          </div>
+        </div>
+        <p style="margin-top:18px;"><b>Capture/Compare (CapCom)</b> is simply the name for the module living inside every hardware timer that does both of these jobs — precisely monitoring and precisely executing events — without needing the CPU to babysit it the whole time.</p>
+        <div class="callout">
+          <span class="callout__label">Big picture</span>
+          Everything in this lecture is really one idea wearing two hats. <b>Capture</b> = "tell me the timer's count <i>when</i> something happens outside." <b>Compare</b> = "do something outside <i>when</i> the timer's count reaches a value I chose." Same register, opposite direction of information flow.
+        </div>
+      </section>
+
+      <section class="section" id="capture">
+        <div class="eyebrow">LO1 · Part 1</div>
+        <h2>Input Capture</h2>
+        <p class="lede">Input Capture takes an instantaneous snapshot of the timer's current count (<code>CNT</code>) the moment a GPIO pin changes state. Crucially — it does <b>not</b> read a sensor value directly. It only ever reads <i>time</i>.</p>
+
+        <div class="callout teal">
+          <span class="callout__label">The stopwatch analogy</span>
+          Think of a stopwatch that's always running in the background — a "master clock" endlessly counting up. Input Capture is like pressing the <b>lap</b> button: the master clock never stops or resets, but the exact reading at the moment you pressed the button gets written down. That's exactly what happens electronically: the timer's <code>CNT</code> register keeps counting, and a pin transition (rising edge, falling edge, or either) causes the current <code>CNT</code> value to be copied into a capture register — instantly, in hardware, with no software delay.
+        </div>
+
+        <p>Because the copy happens in hardware the moment the edge occurs, the CPU achieves <b>precision event timing</b> without ever needing a software delay loop or having to poll the pin over and over. Try it yourself below — the "timer" keeps free-running, and clicking the button simulates a real-world pin edge arriving at a random, unpredictable moment.</p>
+
+        <div class="widget">
+          <div class="widget__title"><span class="dot"></span> Try it — Input Capture</div>
+          <p style="font-size:14px;color:var(--text-dim);margin-bottom:14px;">The counter (<code>CNT</code>) free-runs from 0 up to <code>ARR</code> and wraps around, exactly like a real timer. Click the button at any moment to simulate a signal edge arriving on the GPIO pin.</p>
+          <div style="display:flex;gap:34px;flex-wrap:wrap;align-items:center;">
+            <div>
+              <div style="font-size:12px;color:var(--text-mute);font-family:var(--mono);">CNT (free-running)</div>
+              <div class="readout" id="capCnt" style="font-size:28px;">0</div>
+            </div>
+            <div>
+              <div style="font-size:12px;color:var(--text-mute);font-family:var(--mono);">CCR (captured value)</div>
+              <div class="readout" id="capCcr" style="font-size:28px;color:var(--text-mute);">—</div>
+            </div>
+          </div>
+          <div class="progress" style="margin-top:16px;"><div class="progress__fill" id="capProgress"></div></div>
+          <div class="btnrow">
+            <button class="btn primary" id="capBtn">⚡ Simulate a rising edge on the pin</button>
+            <span id="capMsg" class="mono" style="font-size:13px;color:var(--text-dim);"></span>
+          </div>
+        </div>
+
+        <p>Two very different kinds of real-world events show up on that pin, and it matters which one you're dealing with:</p>
+
+        <div class="grid2" style="margin-top:6px;">
+          <div class="card">
+            <b style="color:#fff;">Asynchronous (discrete) events</b>
+            <p style="margin:8px 0 0;font-size:14.5px;">Unpredictable, one-off events from the physical world. A LiDAR (time-of-flight) sensor might detect a pedestrian 5 m away, then a car 20 m away, then a wall 100 m away — all at completely unpredictable times. Capture lets you grab the exact instant each of these arrives.</p>
+          </div>
+          <div class="card">
+            <b style="color:#fff;">Periodic (continuous) events</b>
+            <p style="margin:8px 0 0;font-size:14.5px;">Repetitive pulses from mechanical motion, e.g. a wheel encoder firing a pulse on every rotation. Here you capture consecutive timestamps <code>t<sub>i</sub></code> and <code>t<sub>i-1</sub></code> and compute <code>Δt = t<sub>i</sub> − t<sub>i-1</sub></code> to work out a physical rate like speed or frequency — exactly how a self-driving car computes its current speed from wheel-encoder pulses.</p>
+          </div>
+        </div>
+      </section>
+
+      <section class="section" id="compare">
+        <div class="eyebrow">LO1 · Part 2</div>
+        <h2>Output Compare</h2>
+        <p class="lede">Output Compare is Input Capture in reverse. Instead of the pin telling the timer something, the timer tells the pin something: when the free-running <code>CNT</code> reaches a target value that <i>you've</i> chosen and stored in the Compare register (<code>CCR</code>), hardware automatically changes the state of a GPIO pin — again, with zero CPU intervention at that instant.</p>
+
+        <div class="grid2" style="margin-top:6px;">
+          <div class="card">
+            <b style="color:#fff;">Asynchronous use — a single future event</b>
+            <p style="margin:8px 0 0;font-size:14.5px;">You want one precisely-timed action in the future. Example: a self-driving car's LiDAR suddenly detects an obstacle — brakes must engage, but to prevent the wheels locking up, a solenoid controlling the brake's hydraulic actuator needs a precise delay before it fires. Set <code>CCR</code> once, and the pin flips exactly on time.</p>
+          </div>
+          <div class="card">
+            <b style="color:#fff;">Periodic use — a repeating signal</b>
+            <p style="margin:8px 0 0;font-size:14.5px;">You want the pin toggling forever at a fixed rate — this is how continuous hardware signals (like PWM, later in this lecture) are created. Example: an ultrasonic parking sensor needs a constant square wave at a fixed frequency to drive its acoustic transducer.</p>
+          </div>
+        </div>
+
+        <h3 style="margin-top:28px;font-size:20px;">CCR vs ARR — don't mix these up</h3>
+        <p>A single timer can host <b>multiple</b> CapCom registers (up to 4 channels), each independent from the main auto-reload register (<code>ARR</code>):</p>
+        <ul style="font-size:15px;color:var(--text-dim);">
+          <li><b>Input Capture</b> is driven purely by the timing of the physical pin — it has nothing to do with <code>ARR</code>.</li>
+          <li><b>Output Compare</b>: the compare register (<code>CCR</code>) decides <i>when within the cycle</i> the pin changes state, while <code>ARR</code> decides <i>how long the whole cycle is</i> (i.e. the master timer's period/frequency).</li>
+        </ul>
+        <div class="callout">
+          <span class="callout__label">Worked mini-example</span>
+          Think of a 60-second HIIT interval: 40 seconds of effort, 20 seconds of rest, repeating. That maps directly onto timer registers: <code>ARR = 60</code> (the whole cycle resets every 60 "seconds"), <code>CCR = 40</code> (the pin/state changes at the 40-mark). The timer keeps counting 0→60→0→60… forever; the compare event fires once per lap, always at count 40.
+        </div>
+      </section>
+
+      <section class="section wide" id="pwm-basics">
+        <div class="eyebrow">LO3 · Part 1</div>
+        <h2>Pulse Width Modulation (PWM)</h2>
+        <p class="lede">PWM is the single most common use of Output Compare. It's a pulse that resets at a specific, constant frequency — and microcontrollers can generate it entirely inside their timer hardware. It's used to control motor position/speed, dim LEDs, regulate voltage, and (later in this lecture) drive a servo.</p>
+        <p>Three terms define a PWM signal completely. Get comfortable with all three before moving on:</p>
+
+        <div class="grid3">
+          <div class="card">
+            <b style="color:var(--amber);">Frequency / Period</b>
+            <p style="margin:8px 0 0;font-size:14px;">The timer counts from 0 up to a maximum value, then resets to 0. The time between resets is the <b>period T</b> [s]. Frequency is just its inverse: <code>f = 1/T</code> [Hz]. This is set to match whatever device you're driving.</p>
+          </div>
+          <div class="card">
+            <b style="color:var(--teal);">Resolution</b>
+            <p style="margin:8px 0 0;font-size:14px;">How many discrete steps the timer counts through in one period. With resolution index <code>b</code>, the counter has <code>2<sup>b</sup></code> steps, counting 0 to <code>2<sup>b</sup>−1</code>. An 8-bit PWM signal counts 0→255 (256 steps) every period. Higher resolution = finer control of whatever's connected.</p>
+          </div>
+          <div class="card">
+            <b style="color:var(--violet);">Duty Cycle (δ)</b>
+            <p style="margin:8px 0 0;font-size:14px;">The fraction of the period that the output is <b>high</b> (<code>t<sub>h</sub></code>) before dropping low for the remainder: <code>δ = t<sub>h</sub>/T × 100%</code>. Since PWM is digital, varying the duty cycle changes the <i>average</i> voltage the connected device sees — that's the whole trick.</p>
+          </div>
+        </div>
+
+        <div class="callout teal">
+          <span class="callout__label">Why this "fakes" an analog voltage</span>
+          A PWM pin is only ever fully HIGH (e.g. 3.3–5&nbsp;V) or fully LOW (0&nbsp;V) — never in between. But if it switches fast enough, the connected device (a motor, an LED, a filter circuit) effectively only "feels" the <i>average</i> voltage over time. A 25% duty cycle at 5&nbsp;V averages to roughly 1.25&nbsp;V; 75% averages to roughly 3.75&nbsp;V. Change the duty cycle, and you change that average smoothly — a fully digital signal producing an effectively analog result.
+        </div>
+
+        <div class="widget">
+          <div class="widget__title"><span class="dot"></span> Live PWM waveform</div>
+          <p style="font-size:14px;color:var(--text-dim);margin-bottom:6px;">Drag the sliders and watch the square wave, the timer's sawtooth count, and the resulting average voltage update in real time.</p>
+          <canvas id="pwmCanvas" width="880" height="230" style="width:100%;height:auto;background:#0D1219;border:1px solid var(--border);border-radius:8px;"></canvas>
+          <div class="fieldrow" style="margin-top:16px;">
+            <div class="field">
+              <label>FREQUENCY: <span id="pwmFreqLbl">500</span> Hz</label>
+              <input type="range" id="pwmFreq" min="50" max="2000" step="10" value="500">
+            </div>
+            <div class="field">
+              <label>DUTY CYCLE: <span id="pwmDutyLbl">50</span> %</label>
+              <input type="range" id="pwmDuty" min="0" max="100" step="1" value="50">
+            </div>
+            <div class="field">
+              <label>RESOLUTION</label>
+              <select id="pwmRes">
+                <option value="8">8-bit (0–255)</option>
+                <option value="10">10-bit (0–1023)</option>
+                <option value="16">16-bit (0–65535)</option>
+              </select>
+            </div>
+          </div>
+          <div class="statrow">
+            <div class="stat">Period T<b id="pwmStatT">—</b></div>
+            <div class="stat">High time t<sub>h</sub><b id="pwmStatTh">—</b></div>
+            <div class="stat">Max counter value<b id="pwmStatMax">—</b></div>
+            <div class="stat">CCR (approx.)<b id="pwmStatCcr">—</b></div>
+            <div class="stat">Average voltage (5V logic)<b id="pwmStatAvg">—</b></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="section" id="pwm-formulas">
+        <div class="eyebrow">LO3 · Part 2</div>
+        <h2>Turning PWM into register values</h2>
+        <p class="lede">A timer doesn't understand "500 Hz" or "25%" directly — it only understands three registers: <code>PSC</code> (prescaler), <code>ARR</code> (auto-reload) and <code>CCR</code> (compare). These two formulas are the bridge, and you'll use them constantly.</p>
+
+        <div class="grid2">
+          <div class="card">
+            <b style="color:#fff;">PWM frequency</b>
+            <p style="margin:10px 0;font-size:26px;font-family:var(--mono);color:var(--amber);text-align:center;">f<sub>pwm</sub> = f<sub>clk</sub> / [(PSC+1)(ARR+1)]</p>
+            <p style="font-size:13.5px;color:var(--text-dim);">Same update-frequency formula from the Timers lecture — PWM frequency <i>is</i> the timer's update frequency.</p>
+          </div>
+          <div class="card">
+            <b style="color:#fff;">Duty cycle</b>
+            <p style="margin:10px 0;font-size:26px;font-family:var(--mono);color:var(--teal);text-align:center;">δ = t<sub>h</sub>/T × 100% = CCR / (ARR+1) × 100%</p>
+            <p style="font-size:13.5px;color:var(--text-dim);"><code>CCR</code> is simply the fraction of the period you want the pin held high, expressed in timer ticks instead of seconds.</p>
+          </div>
+        </div>
+
+        <div class="widget">
+          <div class="widget__title"><span class="dot"></span> PSC / ARR / CCR calculator</div>
+          <p style="font-size:14px;color:var(--text-dim);margin-bottom:6px;">Enter your clock speed, the PWM frequency you want, and the duty cycle you want. This follows the lecture's rule of thumb: pick <code>PSC+1</code> so the scaled timer frequency lands on a clean 1&nbsp;MHz, then solve for <code>ARR</code> and <code>CCR</code>.</p>
+          <div class="fieldrow">
+            <div class="field">
+              <label>f<sub>clk</sub> (MHz)</label>
+              <input type="number" id="calcFclk" value="48" min="1" max="200" step="1">
+            </div>
+            <div class="field">
+              <label>Desired f<sub>pwm</sub> (Hz)</label>
+              <input type="number" id="calcFpwm" value="1000" min="1" max="1000000" step="1">
+            </div>
+            <div class="field">
+              <label>Desired duty (%)</label>
+              <input type="number" id="calcDuty" value="25" min="0" max="100" step="1">
+            </div>
+            <button class="btn ghost" id="calcExampleBtn">Load the slide 11 example</button>
+          </div>
+          <div class="statrow" id="calcStats">
+            <div class="stat">PSC<b id="statPsc">—</b></div>
+            <div class="stat">ARR<b id="statArr">—</b></div>
+            <div class="stat">CCR<b id="statCcr">—</b></div>
+            <div class="stat">Actual f<sub>pwm</sub><b id="statFpwmActual">—</b></div>
+            <div class="stat">Actual duty<b id="statDutyActual">—</b></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="section" id="worked-example">
+        <div class="eyebrow">Worked example</div>
+        <h2>1 kHz PWM, 25% duty cycle, 48 MHz clock</h2>
+        <p class="lede">This is the exact example from the slides — walked through one line at a time. Use the calculator above (already loaded with these numbers) to follow along, or trace it by hand below.</p>
+        <div class="steps">
+          <div class="step">
+            <h4>Combine PSC and ARR into one unknown</h4>
+            <p>We know <code>f<sub>pwm</sub> = f<sub>clk</sub> / [(PSC+1)(ARR+1)]</code>, so rearranged:</p>
+            <pre><span class="tok-com">// (PSC+1)(ARR+1) = fclk / fpwm</span>
+(PSC+1)(ARR+1) = 48,000,000 / 1,000 = <span class="tok-amber">48,000</span></pre>
+          </div>
+          <div class="step">
+            <h4>Apply the rule of thumb: scale the clock to 1 MHz</h4>
+            <p>Rather than guessing how to split 48,000 between two unknowns, pick <code>PSC+1</code> so the scaled timer frequency <code>f<sub>tim</sub> = f<sub>clk</sub>/(PSC+1)</code> becomes a clean 1 MHz:</p>
+            <pre>PSC + 1 = fclk / ftim = 48,000,000 / 1,000,000 = 48
+<span class="tok-amber">PSC = 47</span></pre>
+          </div>
+          <div class="step">
+            <h4>Solve for ARR</h4>
+            <pre>ARR + 1 = 48,000 / (PSC+1) = 48,000 / 48 = 1,000
+<span class="tok-amber">ARR = 999</span></pre>
+          </div>
+          <div class="step">
+            <h4>Solve for CCR from the desired duty cycle</h4>
+            <pre>δ = CCR / (ARR+1) × 100%
+CCR = δ × (ARR+1) / 100 = 25 × 1000 / 100 = <span class="tok-amber">250</span></pre>
+          </div>
+          <div class="step">
+            <h4>Sanity check</h4>
+            <p>With the scaled timer running at 1 MHz, every tick is exactly 1 µs. <code>ARR = 999</code> means the period is 1000 ticks = 1000 µs = 1 ms → 1 kHz. ✅ <code>CCR = 250</code> means the pin is high for 250 of every 1000 ticks → 25%. ✅</p>
+          </div>
+        </div>
+      </section>
+
+      <section class="section wide" id="hardware-pins">
+        <div class="eyebrow">LO2</div>
+        <h2>Linking a GPIO pin to a timer</h2>
+        <p class="lede">A GPIO pin doesn't automatically belong to a timer. Every pin can do several jobs (plain digital I/O, analog input, or one of several peripheral "alternate functions"), and you have to explicitly tell it which job to do. This is the wiring step that makes Capture/Compare physically possible.</p>
+
+        <h3 style="font-size:19px;margin-top:26px;">Step 1 — GPIOx_MODER: choose the pin's mode</h3>
+        <p>Every GPIO port has 16 pins, and each pin gets <b>2 configuration bits</b> in the 32-bit Mode Register:</p>
+        <div class="table-wrap">
+          <table class="regtable">
+            <thead><tr><th>Bits</th><th>Mode</th><th>Meaning</th></tr></thead>
+            <tbody>
+              <tr><td class="mono">00</td><td>Input mode</td><td>Default for most pins — reads a digital voltage in as 0 or 1.</td></tr>
+              <tr><td class="mono">01</td><td>General purpose output</td><td>Pin writes a voltage to connected hardware (e.g. lighting an LED).</td></tr>
+              <tr><td class="mono">10</td><td>Alternate function mode</td><td>Hands the pin over to a peripheral — timer, SPI, UART, etc. <b>This is the one CapCom needs.</b></td></tr>
+              <tr><td class="mono">11</td><td>Analog mode</td><td>Puts the pin in A/D mode to read a raw analog voltage.</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <pre><span class="tok-com">// Clear bits 10–11, then set Pin 5 of Port A to output mode</span>
+<span class="tok-fn">*</span>((<span class="tok-kw">volatile</span> <span class="tok-type">uint32_t</span><span class="tok-fn">*</span>)<span class="tok-num">0x50000000</span>) &amp;= ~(<span class="tok-num">0b11</span> &lt;&lt; <span class="tok-num">10</span>);
+<span class="tok-fn">*</span>((<span class="tok-kw">volatile</span> <span class="tok-type">uint32_t</span><span class="tok-fn">*</span>)<span class="tok-num">0x50000000</span>) |= <span class="tok-num">0b01</span> &lt;&lt; <span class="tok-num">10</span>;</pre>
+        <p style="font-size:13.5px;color:var(--text-dim);">Notice the mask width always equals the number of bits you're clearing, shifted up to the LSB of the field you care about — the same pattern you used for every register in the Timers lecture.</p>
+
+        <h3 style="font-size:19px;margin-top:26px;">Step 2 — which alternate function is "the timer"?</h3>
+        <p>Setting <code>10</code> only says "alternate function mode" — it doesn't say <i>which</i> peripheral. Every pin on the STM32C031C6 supports several alternate functions (AF0–AF15+), documented per-pin in the datasheet's alternate function tables. A small excerpt for the pins used in this lecture:</p>
+        <div class="table-wrap">
+          <table class="regtable">
+            <thead><tr><th>Pin</th><th>Timer / Channel</th><th>AF</th></tr></thead>
+            <tbody>
+              <tr><td class="mono">PA6</td><td>TIM3_CH1</td><td class="mono">AF1</td></tr>
+              <tr><td class="mono">PA7</td><td>TIM3_CH2</td><td class="mono">AF1</td></tr>
+              <tr><td class="mono">PA7</td><td>TIM14_CH1</td><td class="mono">AF4</td></tr>
+              <tr><td class="mono">PB4</td><td>TIM3_CH1</td><td class="mono">AF1</td></tr>
+              <tr><td class="mono">PA0</td><td>TIM1_CH1</td><td class="mono">AF5</td></tr>
+              <tr><td class="mono">PC14</td><td>TIM3_CH2</td><td class="mono">AF11</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="callout">
+          <span class="callout__label">Reading the real datasheet</span>
+          On the actual Nucleo board, this mapping lives in the User Manual (<code>um2593</code>, pin-out diagrams) and the Datasheet (<code>DS_stm32C031C6</code>, Tables 13–20 — one table per port). Every project starts the same way: figure out which physical pin you want to use, then look up which timer/channel/AF number it's tied to before writing a single line of code.
+        </div>
+
+        <h3 style="font-size:19px;margin-top:26px;">Step 3 — GPIOx_AFR: select that alternate function</h3>
+        <p>The Alternate Function Register is split into two 32-bit halves, stored as an array <code>AFR[2]</code>:</p>
+        <ul style="font-size:15px;color:var(--text-dim);">
+          <li><code>AFR[0]</code> — the "Low" register (AFRL), covers pins 0–7, 4 bits each</li>
+          <li><code>AFR[1]</code> — the "High" register (AFRH), covers pins 8–15, 4 bits each</li>
+        </ul>
+        <pre><span class="tok-type">GPIOA</span>-&gt;<span class="tok-fn">MODER</span> |= <span class="tok-num">0b10</span>&lt;&lt;<span class="tok-num">14</span>;    <span class="tok-com">// Enable Alternate Function mode for PA7</span>
+<span class="tok-type">GPIOA</span>-&gt;<span class="tok-fn">AFR</span>[<span class="tok-num">0</span>] |= <span class="tok-num">4</span> &lt;&lt; <span class="tok-num">28</span>;  <span class="tok-com">// Set AF of PA7 to TIM14_CH1 (AF4)</span>
+
+<span class="tok-type">GPIOC</span>-&gt;<span class="tok-fn">MODER</span> |= <span class="tok-num">0b10</span>&lt;&lt;<span class="tok-num">28</span>;    <span class="tok-com">// Enable Alternate Function mode for PC14</span>
+<span class="tok-type">GPIOC</span>-&gt;<span class="tok-fn">AFR</span>[<span class="tok-num">1</span>] |= <span class="tok-num">11</span> &lt;&lt; <span class="tok-num">24</span>; <span class="tok-com">// Set AF of PC14 to TIM3_CH2 (AF11)</span></pre>
+        <p style="font-size:13.5px;color:var(--text-dim);">Table 40 (RM0490, p.195) lists every AFR bit field — the pattern is always "4 bits per pin, pin number mod 8 tells you the shift, pin number ÷ 8 tells you which array element."</p>
+      </section>
+
+      <section class="section wide" id="registers">
+        <div class="eyebrow">LO2 · Deep dive</div>
+        <h2>The four CapCom registers</h2>
+        <p class="lede">Once a pin is wired to a timer, four registers inside that timer do all the actual work. Every one of the STM32's general-purpose timers (like <code>TIM3</code>) has up to 4 independent channels, and each channel gets its own slice of these four registers.</p>
+
+        <div class="grid2">
+          <div class="card">
+            <b style="color:var(--amber);">CCMR — Capture/Compare Mode Register</b>
+            <p style="margin:8px 0 0;font-size:14px;">Decides <i>what kind</i> of channel this is (input or output) and <i>how</i> it behaves. Split into <code>CCMR1</code> (channels 1–2) and <code>CCMR2</code> (channels 3–4), 8 bits per channel.</p>
+          </div>
+          <div class="card">
+            <b style="color:var(--teal);">CCR — Capture/Compare Register</b>
+            <p style="margin:8px 0 0;font-size:14px;">The actual number. In input mode, <code>CNT</code> gets <i>written into</i> here on an edge. In output/PWM mode, <i>you write</i> the target value here.</p>
+          </div>
+          <div class="card">
+            <b style="color:var(--violet);">CCER — Capture/Compare Enable Register</b>
+            <p style="margin:8px 0 0;font-size:14px;">The final switch that actually connects the channel to the physical GPIO pin, plus polarity (which edge / which active level).</p>
+          </div>
+          <div class="card">
+            <b style="color:var(--green);">DIER / SR — interrupt plumbing</b>
+            <p style="margin:8px 0 0;font-size:14px;"><code>DIER</code> turns on interrupts per-channel; <code>SR</code> holds the flags that say an event actually happened.</p>
+          </div>
+        </div>
+
+        <h3 style="font-size:19px;margin-top:30px;">CCMR — choosing input vs output (CCxS)</h3>
+        <p>The bottom 2 bits of each channel's field in <code>CCMR</code> — called <code>CCxS</code> — decide everything:</p>
+        <div class="table-wrap">
+          <table class="regtable">
+            <thead><tr><th>CCxS</th><th>Meaning</th></tr></thead>
+            <tbody>
+              <tr><td class="mono">00</td><td>Output Compare — this channel drives the pin.</td></tr>
+              <tr><td class="mono">01</td><td>Input Capture, <b>straight</b> mapping — <code>CCR1</code> reads timer input <code>TI1</code>, <code>CCR2</code> reads <code>TI2</code>.</td></tr>
+              <tr><td class="mono">10</td><td>Input Capture, <b>cross</b> mapping — <code>CCR1</code> reads <code>TI2</code>, <code>CCR2</code> reads <code>TI1</code> (useful for advanced encoder configurations).</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p style="font-size:13.5px;color:var(--text-dim);">Reference: Table 87, p.515, RM0490. This same register also controls <b>one-pulse mode</b> — a single waveform of a specified width fired once in response to a single trigger, rather than repeating forever.</p>
+
+        <h3 style="font-size:19px;margin-top:30px;">CCER — connecting the channel to the pin</h3>
+        <p>Setting a mode in <code>CCMR</code> configures the channel's <i>behaviour</i>, but nothing reaches the physical pin until <code>CCER</code> says so:</p>
+        <ul style="font-size:15px;color:var(--text-dim);">
+          <li><code>CCxE</code> — set high to actually enable/connect this channel to the pin.</li>
+          <li><code>CCxP</code> — polarity bit. Meaning flips depending on direction:</li>
+        </ul>
+        <div class="table-wrap">
+          <table class="regtable">
+            <thead><tr><th>Direction</th><th>CCxP = 0</th><th>CCxP = 1</th></tr></thead>
+            <tbody>
+              <tr><td>Output</td><td>Active → pin high, inactive → pin low</td><td>Active → pin low, inactive → pin high</td></tr>
+              <tr><td>Input</td><td>Trigger (write CCR) on rising edge</td><td>Trigger (write CCR) on falling edge</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h3 style="font-size:19px;margin-top:30px;">DIER &amp; SR — turning events into interrupts</h3>
+        <p>Just like the update interrupt from the Timers lecture, CapCom events can trigger an ISR instead of being polled:</p>
+        <ul style="font-size:15px;color:var(--text-dim);">
+          <li><code>TIMx_DIER</code>: set <code>CCxIE</code> for whichever channel(s) you want to raise an interrupt.</li>
+          <li><code>TIMx_SR</code>: <code>CCxIF</code> is the flag that actually fired — meaning "rising/falling edge detected and <code>CNT</code> written into <code>CCR</code>" in input mode, or "<code>CNT == CCR</code>" in output/PWM mode.</li>
+          <li><code>CCxOF</code> — the <b>overcapture flag</b>. If you're in input capture mode and a <i>second</i> edge arrives before you've cleared the previous <code>CCxIF</code>, this flag sets to warn you a value may have been overwritten before you read it.</li>
+        </ul>
+      </section>
+
+      <section class="section wide" id="ocxm-modes">
+        <div class="eyebrow">Interactive</div>
+        <h2>Output Compare Mode explorer (OCxM)</h2>
+        <p class="lede">The 3 bits <code>OCxM[2:0]</code> inside <code>CCMR</code> (output mode) are the single most important setting for anything you build with Output Compare. Click through all 8 modes below and watch how the pin behaves relative to <code>CNT</code> and <code>CCR</code>.</p>
+        <div class="widget">
+          <div class="widget__title"><span class="dot"></span> OCxM mode picker</div>
+          <div class="modebtns" id="ocmButtons"></div>
+          <p id="ocmDesc" style="font-size:14.5px;color:var(--text-dim);min-height:44px;"></p>
+          <div class="timeline" id="ocmTimeline"></div>
+          <div style="font-size:12px;color:var(--text-mute);font-family:var(--mono);">Each block = one timer tick relative to CCR (marked with ▲). Green = pin high, red = pin low.</div>
+        </div>
+        <p style="font-size:13.5px;color:var(--text-dim);">Reference: Table 87, p.515, RM0490. Modes <code>0110</code> (PWM Mode 1) and <code>0111</code> (PWM Mode 2) are exact opposites of each other and are what you'll use for essentially every PWM application in this course.</p>
+      </section>
+
+      <section class="section wide" id="putting-together">
+        <div class="eyebrow">Putting it together</div>
+        <h2>Full register setup, line by line</h2>
+        <p class="lede">Here's the complete sequence for both directions, using <code>TIM3</code> on pin <code>PA6</code>. Timer frequency setup (PSC/ARR) is skipped here since it was covered in the last lecture — the focus is purely on the CapCom-specific lines.</p>
+
+        <div class="codepanel">
+          <div class="codepanel__tabs">
+            <div class="codepanel__tab active" data-tab="capcode">Input Capture mode</div>
+            <div class="codepanel__tab" data-tab="cmpcode">Output Compare mode</div>
+          </div>
+          <div class="codepanel__panel active" data-panel="capcode">
+<pre><span class="tok-type">RCC</span>-&gt;<span class="tok-fn">IOPENR</span>  |= <span class="tok-num">1</span>&lt;&lt;<span class="tok-num">0</span>;         <span class="tok-com">// Enable clock for GPIOA</span>
+<span class="tok-type">RCC</span>-&gt;<span class="tok-fn">APBENR1</span> |= <span class="tok-num">1</span>&lt;&lt;<span class="tok-num">1</span>;         <span class="tok-com">// Enable clock for TIM3</span>
+
+<span class="tok-com">// Configure PA6 to Alternate Function</span>
+<span class="tok-type">GPIOA</span>-&gt;<span class="tok-fn">MODER</span> &amp;= ~(<span class="tok-num">0b11</span>&lt;&lt;<span class="tok-num">12</span>);  <span class="tok-com">// Clear bits 12–13 in GPIOA</span>
+<span class="tok-type">GPIOA</span>-&gt;<span class="tok-fn">MODER</span> |= <span class="tok-num">0b10</span>&lt;&lt;<span class="tok-num">12</span>;   <span class="tok-com">// Set Pin 6 of Port A to alternate function mode</span>
+
+<span class="tok-com">// Attach PA6 to TIM3_CH1 -&gt; AFRL -&gt; AFR[0]</span>
+<span class="tok-type">GPIOA</span>-&gt;<span class="tok-fn">AFR</span>[<span class="tok-num">0</span>] &amp;= ~(<span class="tok-num">0xF</span>&lt;&lt;<span class="tok-num">24</span>); <span class="tok-com">// Clear bits 24–27 in AFRL</span>
+<span class="tok-type">GPIOA</span>-&gt;<span class="tok-fn">AFR</span>[<span class="tok-num">0</span>] |= <span class="tok-num">1</span>&lt;&lt;<span class="tok-num">24</span>;   <span class="tok-com">// Set Pin 6 of Port A to AF1: TIM3_CH1</span>
+
+<span class="tok-com">// ...timer frequency setup skipped, focus on Capture config...</span>
+<span class="tok-type">TIM3</span>-&gt;<span class="tok-fn">CCMR1</span> &amp;= ~(<span class="tok-num">0b11</span> &lt;&lt; <span class="tok-num">0</span>); <span class="tok-com">// Clear CapCom selection bits</span>
+<span class="tok-type">TIM3</span>-&gt;<span class="tok-fn">CCMR1</span> |= (<span class="tok-num">0b01</span> &lt;&lt; <span class="tok-num">0</span>);  <span class="tok-com">// Set to input capture, straight mapping</span>
+<span class="tok-type">TIM3</span>-&gt;<span class="tok-fn">CCER</span>  &amp;= ~(<span class="tok-num">1</span> &lt;&lt; <span class="tok-num">1</span>);   <span class="tok-com">// Polarity: trigger on rising edge</span>
+<span class="tok-type">TIM3</span>-&gt;<span class="tok-fn">CCER</span>  |= (<span class="tok-num">1</span> &lt;&lt; <span class="tok-num">0</span>);    <span class="tok-com">// Enable capture for TIM3_CH1</span>
+<span class="tok-type">TIM3</span>-&gt;<span class="tok-fn">DIER</span>  |= (<span class="tok-num">1</span> &lt;&lt; <span class="tok-num">1</span>);    <span class="tok-com">// Enable interrupts for TIM3_CH1</span>
+<span class="tok-fn">NVIC_EnableIRQ</span>(<span class="tok-type">TIM3_IRQn</span>);        <span class="tok-com">// Enable TIM3 interrupts on the Cortex core</span>
+<span class="tok-type">TIM3</span>-&gt;<span class="tok-fn">CR1</span>   |= <span class="tok-num">1</span> &lt;&lt; <span class="tok-num">0</span>;         <span class="tok-com">// Enable the counter</span></pre>
+          </div>
+          <div class="codepanel__panel" data-panel="cmpcode">
+<pre><span class="tok-com">// Focus on Compare config, toggle mode</span>
+<span class="tok-type">TIM3</span>-&gt;<span class="tok-fn">CCMR1</span> &amp;= ~(<span class="tok-num">0b11</span> &lt;&lt; <span class="tok-num">0</span>);  <span class="tok-com">// Clear CapCom selection bits -&gt; sets to output</span>
+<span class="tok-type">TIM3</span>-&gt;<span class="tok-fn">CCMR1</span> &amp;= ~(<span class="tok-num">0b111</span> &lt;&lt; <span class="tok-num">4</span>); <span class="tok-com">// Clear OC1M bits 4-6</span>
+<span class="tok-type">TIM3</span>-&gt;<span class="tok-fn">CCMR1</span> |= (<span class="tok-num">0b0011</span> &lt;&lt; <span class="tok-num">4</span>);  <span class="tok-com">// Configure into toggle mode</span>
+<span class="tok-type">TIM3</span>-&gt;<span class="tok-fn">CCR1</span>  = <span class="tok-num">1000</span>;             <span class="tok-com">// Set compare threshold value</span>
+<span class="tok-type">TIM3</span>-&gt;<span class="tok-fn">CCER</span>  &amp;= ~(<span class="tok-num">1</span> &lt;&lt; <span class="tok-num">1</span>);    <span class="tok-com">// Polarity: output goes high</span>
+<span class="tok-type">TIM3</span>-&gt;<span class="tok-fn">CCER</span>  |= (<span class="tok-num">1</span> &lt;&lt; <span class="tok-num">0</span>);     <span class="tok-com">// Enable compare for TIM3_CH1</span>
+<span class="tok-type">TIM3</span>-&gt;<span class="tok-fn">DIER</span>  |= (<span class="tok-num">1</span> &lt;&lt; <span class="tok-num">1</span>);     <span class="tok-com">// Enable interrupts for TIM3_CH1</span>
+<span class="tok-fn">NVIC_EnableIRQ</span>(<span class="tok-type">TIM3_IRQn</span>);         <span class="tok-com">// Enable TIM3 interrupts on the Cortex core</span>
+<span class="tok-type">TIM3</span>-&gt;<span class="tok-fn">CR1</span>   |= <span class="tok-num">1</span> &lt;&lt; <span class="tok-num">0</span>;          <span class="tok-com">// Enable the counter</span></pre>
+          </div>
+        </div>
+        <div class="callout">
+          <span class="callout__label">Notice the symmetry</span>
+          Both directions touch exactly the same four registers (<code>CCMR1</code>, <code>CCR1</code>, <code>CCER</code>, <code>DIER</code>) — only the bit patterns differ. Once you've internalised one direction, the other is mostly a mirror image.
+        </div>
+      </section>
+
+      <section class="section" id="preload">
+        <div class="eyebrow">Detail that trips people up</div>
+        <h2>Preload &amp; glitch-free PWM updates</h2>
+        <p class="lede">PWM is often changed <i>while it's running</i> — a servo sweeping, a motor accelerating. If you naively wrote a new <code>CCR</code> mid-cycle, you could get a visible glitch. Three settings fix this:</p>
+        <dl class="glossary">
+          <dt>OCxPE — Output Compare preload enable</dt>
+          <dd>Set inside <code>CCMRx</code>. Ensures a new duty-cycle value only takes effect right after the counter resets, never mid-cycle — so a change is always applied cleanly at the start of the next period.</dd>
+          <dt>ARPE — Auto-reload preload enable</dt>
+          <dd>Set inside <code>CR1</code>. Same idea, but for frequency: a new <code>ARR</code> value only takes effect on a counter reset, not immediately.</dd>
+          <dt>UG — Update Generation</dt>
+          <dd>Set inside <code>EGR</code>. Manually forces (in software) an immediate transfer from the "preload" shadow registers into the active ones — done once, before you start the timer. Without it, the very first period runs with garbage/undefined prescaler and period values, producing a glitch on power-up.</dd>
+        </dl>
+        <div class="callout red">
+          <span class="callout__label">Rule of thumb</span>
+          If you ever see a single wrong-looking pulse right when a PWM timer starts, it's almost always a missing <code>UG</code> bit. Set it once, immediately after configuration, before enabling the counter.
+        </div>
+      </section>
+
+      <section class="section wide" id="servo-case">
+        <div class="eyebrow">Case study 1</div>
+        <h2>Driving a hobby servo motor</h2>
+        <p class="lede">A standard hobby servo expects one pulse every <code>T = 20 ms</code> (a 50 Hz PWM signal). The width of that pulse — not its duty cycle percentage — tells the servo which angle to hold, anywhere from 0° to 180°.</p>
+        <p>The mapping used in this lecture: 0° → 500 µs pulse, 180° → 2500 µs pulse, linear in between:</p>
+        <pre>t<sub>h</sub> = t<sub>0</sub> + [(t<sub>180</sub> − t<sub>0</sub>) / 180] × θ  =  500 + (2000 / 180) × θ   [µs]</pre>
+
+        <div class="widget">
+          <div class="widget__title"><span class="dot"></span> Try it — servo angle simulator</div>
+          <div class="needle-wrap">
+            <svg id="servoSvg" width="220" height="140" viewBox="0 0 220 140">
+              <path d="M 20 120 A 100 100 0 0 1 200 120" fill="none" stroke="#263140" stroke-width="10"/>
+              <line id="servoNeedle" x1="110" y1="120" x2="110" y2="30" stroke="#FFB300" stroke-width="6" stroke-linecap="round"/>
+              <circle cx="110" cy="120" r="9" fill="#FFB300"/>
+            </svg>
+            <div style="flex:1;min-width:220px;">
+              <div class="field" style="margin-bottom:10px;">
+                <label>ANGLE θ: <span id="servoAngleLbl">90</span>°</label>
+                <input type="range" id="servoAngle" min="0" max="180" step="1" value="90" style="width:100%;">
+              </div>
+              <div class="statrow">
+                <div class="stat">Pulse width<b id="servoPulse">—</b></div>
+                <div class="stat">Duty cycle (of 20 ms)<b id="servoDuty">—</b></div>
+                <div class="stat">CCR to write (1 µs/tick)<b id="servoCcr">—</b></div>
+              </div>
+            </div>
+          </div>
+          <div style="margin-top:14px;">
+            <canvas id="servoWaveCanvas" width="880" height="90" style="width:100%;height:auto;background:#0D1219;border:1px solid var(--border);border-radius:8px;"></canvas>
+          </div>
+        </div>
+
+        <h3 style="font-size:19px;margin-top:26px;">Configuring the timer for 50 Hz</h3>
+        <p>Same rule of thumb as before — scale <code>f<sub>clk</sub></code> down to 1 MHz first, so each tick is exactly 1 µs and pulse widths can be written directly in microseconds:</p>
+        <pre>(PSC+1)(ARR+1) = fclk / fupdate = 48,000,000 / 50 = 960,000
+PSC + 1 = fclk / ftim = 48,000,000 / 1,000,000 = 48   →   <span class="tok-amber">PSC = 47</span>
+ARR + 1 = 960,000 / (PSC+1) = 960,000 / 48 = 20,000   →   <span class="tok-amber">ARR = 19,999</span></pre>
+
+        <div class="table-wrap">
+          <table class="regtable">
+            <thead><tr><th>Angle</th><th>Pulse width (ms)</th><th>Pulse width (µs)</th><th>Duty cycle</th></tr></thead>
+            <tbody>
+              <tr><td>0°</td><td>0.5</td><td class="mono">500</td><td>2.5%</td></tr>
+              <tr><td>90°</td><td>1.5</td><td class="mono">1500</td><td>7.5%</td></tr>
+              <tr><td>180°</td><td>2.5</td><td class="mono">2500</td><td>12.5%</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h3 style="font-size:19px;margin-top:26px;">The reusable wrapper functions</h3>
+        <p>Two small helper functions make the main code much cleaner: one to set any pin's alternate function generically, one to arm a channel into PWM Mode 1.</p>
+        <div class="codepanel">
+          <div class="codepanel__tabs">
+            <div class="codepanel__tab active" data-tab="afwrap">GPIO_SetAltFcn()</div>
+            <div class="codepanel__tab" data-tab="pwmwrap">TIM3_PWM1_Init()</div>
+            <div class="codepanel__tab" data-tab="mainisr">main() + ISR</div>
+          </div>
+          <div class="codepanel__panel active" data-panel="afwrap">
+<pre><span class="tok-kw">void</span> <span class="tok-fn">GPIO_SetAltFcn</span>(<span class="tok-type">GPIO_TypeDef</span> <span class="tok-fn">*</span>port, <span class="tok-type">uint8_t</span> pin, <span class="tok-type">uint8_t</span> num_af) {
+  <span class="tok-com">// AF register is an array of 2, 4 bits per pin: pins 0-7 -&gt; AFR[0]; pins 8-15 -&gt; AFR[1]</span>
+  <span class="tok-type">uint8_t</span> idx   = pin / <span class="tok-num">8</span>;
+  <span class="tok-type">uint8_t</span> shift = (pin % <span class="tok-num">8</span>) * <span class="tok-num">4</span>;   <span class="tok-com">// 4 bits per register field</span>
+
+  port-&gt;AFR[idx] &amp;= ~(<span class="tok-num">0xF</span> &lt;&lt; shift);
+  port-&gt;AFR[idx] |=  (num_af &lt;&lt; shift);
+}</pre>
+          </div>
+          <div class="codepanel__panel" data-panel="pwmwrap">
+<pre><span class="tok-kw">void</span> <span class="tok-fn">TIM3_PWM1_Init</span>(<span class="tok-type">uint8_t</span> ch, <span class="tok-type">uint32_t</span> duty_us) {
+  <span class="tok-kw">switch</span> (ch) {
+    <span class="tok-kw">case</span> <span class="tok-num">1</span>:
+      <span class="tok-com">// CC1S = 00 (Output), OC1M = 110 (PWM Mode 1)</span>
+      <span class="tok-type">TIM3</span>-&gt;CCMR1 &amp;= ~(<span class="tok-num">0b11</span>&lt;&lt;<span class="tok-num">0</span> | <span class="tok-num">0b111</span>&lt;&lt;<span class="tok-num">4</span>);
+      <span class="tok-type">TIM3</span>-&gt;CCMR1 |=  (<span class="tok-num">0b110</span>&lt;&lt;<span class="tok-num">4</span>) | (<span class="tok-num">1</span>&lt;&lt;<span class="tok-num">3</span>); <span class="tok-com">// PWM1 + preload enable</span>
+      <span class="tok-type">TIM3</span>-&gt;CCR1  = duty_us;
+      <span class="tok-type">TIM3</span>-&gt;CCER  |= (<span class="tok-num">1</span>&lt;&lt;<span class="tok-num">0</span>);
+      <span class="tok-kw">break</span>;
+    <span class="tok-com">// ...case 2, 3, 4 follow the identical pattern for CH2/CH3/CH4...</span>
+  }
+  <span class="tok-type">TIM3</span>-&gt;EGR |= (<span class="tok-num">1</span>&lt;&lt;<span class="tok-num">0</span>);  <span class="tok-com">// UG: apply preload values immediately</span>
+  <span class="tok-type">TIM3</span>-&gt;CR1 |= (<span class="tok-num">1</span>&lt;&lt;<span class="tok-num">0</span>);  <span class="tok-com">// Make sure the timer is enabled</span>
+}</pre>
+          </div>
+          <div class="codepanel__panel" data-panel="mainisr">
+<pre><span class="tok-kw">#define</span> SERVO_MIN_US <span class="tok-num">500</span>   <span class="tok-com">// ~0 degrees</span>
+<span class="tok-kw">#define</span> SERVO_MAX_US <span class="tok-num">2500</span>  <span class="tok-com">// ~180 degrees</span>
+<span class="tok-kw">volatile</span> <span class="tok-type">uint16_t</span> pulse_width = SERVO_MIN_US;
+<span class="tok-kw">volatile</span> <span class="tok-type">int16_t</span>  step = <span class="tok-num">11</span>;   <span class="tok-com">// ~1 degree per update</span>
+
+<span class="tok-kw">int</span> <span class="tok-fn">main</span>(<span class="tok-kw">void</span>) {
+  Clock_Enable(GPIOA_BUS);
+  Clock_Enable(TIM3_BUS);
+  GPIO_InitPin(GPIOA, <span class="tok-num">6</span>, ALT, NONE);
+  GPIO_SetAltFcn(GPIOA, <span class="tok-num">6</span>, <span class="tok-num">1</span>);                    <span class="tok-com">// PA6 -&gt; AF1 -&gt; TIM3_CH1</span>
+  Timer_Init(TIM3, TIM3_IRQn, <span class="tok-num">47</span>, <span class="tok-num">19999</span>, <span class="tok-num">1</span>);   <span class="tok-com">// 50 Hz update, interrupts on</span>
+  TIM3_PWM1_Init(<span class="tok-num">1</span>, <span class="tok-num">500</span>);                       <span class="tok-com">// start at 0 degrees</span>
+  <span class="tok-kw">while</span> (<span class="tok-num">1</span>) { <span class="tok-com">/* wait for interrupts */</span> }
+}
+
+<span class="tok-kw">void</span> <span class="tok-fn">TIM3_IRQHandler</span>(<span class="tok-kw">void</span>) {
+  <span class="tok-kw">if</span> (TIM3-&gt;SR &amp; (<span class="tok-num">1</span>&lt;&lt;<span class="tok-num">0</span>)) {           <span class="tok-com">// UIF: fires every 20 ms</span>
+    TIM3-&gt;SR &amp;= ~(<span class="tok-num">1</span>&lt;&lt;<span class="tok-num">0</span>);
+    pulse_width += step;
+    <span class="tok-kw">if</span> (pulse_width &gt;= SERVO_MAX_US || pulse_width &lt;= SERVO_MIN_US) {
+      step = -step;                        <span class="tok-com">// reverse sweep direction</span>
+    }
+    TIM3-&gt;CCR1 = pulse_width;              <span class="tok-com">// new angle takes effect next period</span>
+  }
+}</pre>
+          </div>
+        </div>
+        <p style="font-size:14px;color:var(--text-dim);">This ISR fires every 20 ms (once per PWM period) and nudges <code>pulse_width</code> a little each time, sweeping the servo smoothly back and forth — exactly the sweeping demo shown live in the lecture.</p>
+      </section>
+
+      <section class="section wide" id="button-case">
+        <div class="eyebrow">Case study 2</div>
+        <h2>Pushbutton-controlled servo, with debounce</h2>
+        <p class="lede">Second version of the demo: instead of auto-sweeping, pressing a pushbutton on <code>PB11</code> steps the servo 45° at a time. That needs <code>t<sub>Δ45</sub> = (2000/180) × 45 = 500 µs</code> per step — but real pushbuttons "bounce" (rapidly flicker) for a few milliseconds when pressed, so a second, faster timer (<code>TIM16</code> at 1 kHz) is added purely to sample and clean up the button signal.</p>
+
+        <div class="callout violet">
+          <span class="callout__label">Why you need a second timer</span>
+          <code>TIM3</code> is busy generating the 50 Hz servo PWM signal and can't also be used to sample a button every millisecond. <code>TIM16</code> runs independently at 1 kHz just to drive the debounce logic — a nice example of a chip's multiple timers each doing one focused job.
+        </div>
+
+        <h3 style="font-size:19px;margin-top:22px;">The shift-register debounce trick</h3>
+        <p>Every 1 ms, <code>TIM16</code>'s ISR increments a counter. Every 10th tick (≈10 ms), it samples the pin and shifts that sample into an 8-bit history register, discarding the oldest bit. A press is only accepted once the register reads exactly <code>0x80</code> (<code>0b10000000</code>) — meaning "the seven most recent samples were all low, and nothing more recent has flickered back high yet." This ignores all the noisy bouncing and fires exactly once per real press.</p>
+
+        <div class="widget">
+          <div class="widget__title"><span class="dot"></span> Try it — button debounce shift register</div>
+          <p style="font-size:14px;color:var(--text-dim);margin-bottom:10px;">Each click simulates one 10 ms sample while the button is physically held down (pin reads LOW / pressed). Watch the 8-bit history shift left each time, and see it fire exactly once when the pattern becomes <code>0x80</code>.</p>
+          <div class="bitreg" id="debounceReg"></div>
+          <div class="statrow">
+            <div class="stat">Register (hex)<b id="debounceHex" style="color:var(--amber);">0xFF</b></div>
+            <div class="stat">Samples taken<b id="debounceCount">0</b></div>
+            <div class="stat">Servo angle<b id="debounceAngle">0°</b></div>
+          </div>
+          <div class="btnrow">
+            <button class="btn primary" id="debounceSampleBtn">🔘 Sample pin (button held LOW)</button>
+            <button class="btn ghost" id="debounceReleaseBtn">Release button (pin HIGH)</button>
+            <button class="btn ghost" id="debounceResetBtn">↺ Reset</button>
+          </div>
+          <div id="debounceMsg" class="mono" style="font-size:13.5px;color:var(--green);min-height:20px;"></div>
+        </div>
+
+        <h3 style="font-size:19px;margin-top:22px;">The full debounce ISR</h3>
+        <pre><span class="tok-kw">void</span> <span class="tok-fn">TIM16_IRQHandler</span>(<span class="tok-kw">void</span>) {
+  <span class="tok-kw">if</span> (TIM16-&gt;SR &amp; (<span class="tok-num">1</span>&lt;&lt;<span class="tok-num">0</span>)) {
+    TIM16-&gt;SR &amp;= ~(<span class="tok-num">1</span>&lt;&lt;<span class="tok-num">0</span>);
+    <span class="tok-kw">static</span> <span class="tok-type">uint16_t</span> debounce_timer = <span class="tok-num">0</span>;
+    <span class="tok-kw">static</span> <span class="tok-type">uint8_t</span>  button_history = <span class="tok-num">0xFF</span>;  <span class="tok-com">// starts released (HIGH)</span>
+    debounce_timer++;
+
+    <span class="tok-kw">if</span> (debounce_timer &gt;= <span class="tok-num">10</span>) {           <span class="tok-com">// sample every ~10 ms</span>
+      debounce_timer = <span class="tok-num">0</span>;
+      button_history = button_history &lt;&lt; <span class="tok-num">1</span>;      <span class="tok-com">// make room for new sample, MSB discarded</span>
+
+      <span class="tok-kw">if</span> (GPIO_InputReadPin(GPIOB, <span class="tok-num">11</span>)) {
+        button_history |= (<span class="tok-num">1</span>&lt;&lt;<span class="tok-num">0</span>);            <span class="tok-com">// pin currently HIGH -&gt; record a 1</span>
+      }
+
+      <span class="tok-com">// Detect a clean, stable falling edge -&gt; pin went low when pressed</span>
+      <span class="tok-kw">if</span> (button_history == <span class="tok-num">0x80</span>) {
+        pulse_width += step;
+        <span class="tok-kw">if</span> (pulse_width &gt;= SERVO_MAX_US || pulse_width &lt;= SERVO_MIN_US) {
+          step = -step;
+        }
+        TIM3-&gt;CCR1 = pulse_width;         <span class="tok-com">// latch new pulse width for next period</span>
+      }
+    }
+  }
+}</pre>
+        <p style="font-size:13.5px;color:var(--text-dim);">Everything else — clock enables, <code>GPIO_InitPin(GPIOB,11,INPUT,PULL_UP)</code> for the button, and a second <code>Timer_Init(TIM16, TIM16_IRQn, 47, 999, 1)</code> call for the 1 kHz sampling timer — is set up in <code>main()</code> exactly like the earlier example, just with <code>TIM3</code>'s own interrupt now turned off since it's only generating PWM, not driving logic.</p>
+      </section>
+
+      <section class="section wide" id="cheatsheet">
+        <div class="eyebrow">Recap</div>
+        <h2>Cheat sheet</h2>
+        <div class="table-wrap">
+          <table class="regtable">
+            <thead><tr><th>Register</th><th>Job</th><th>Key bits</th></tr></thead>
+            <tbody>
+              <tr><td class="mono">GPIOx_MODER</td><td>Choose pin mode</td><td class="mono">10 = alternate function</td></tr>
+              <tr><td class="mono">GPIOx_AFR[0/1]</td><td>Choose which peripheral</td><td>4 bits/pin, low=[0-7] high=[8-15]</td></tr>
+              <tr><td class="mono">TIMx_CCMR1/2</td><td>Channel mode (in/out), OCxM behaviour</td><td class="mono">CCxS, OCxM[2:0], OCxPE</td></tr>
+              <tr><td class="mono">TIMx_CCR1-4</td><td>The captured value / the compare target</td><td>raw counter value</td></tr>
+              <tr><td class="mono">TIMx_CCER</td><td>Connect channel to physical pin, set polarity</td><td class="mono">CCxE, CCxP</td></tr>
+              <tr><td class="mono">TIMx_DIER</td><td>Enable interrupts per channel</td><td class="mono">CCxIE</td></tr>
+              <tr><td class="mono">TIMx_SR</td><td>Event / overcapture flags</td><td class="mono">CCxIF, CCxOF</td></tr>
+              <tr><td class="mono">TIMx_EGR</td><td>Force preload → active transfer</td><td class="mono">UG</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="grid2" style="margin-top:20px;">
+          <div class="card cheat-highlight">
+            <b style="color:#fff;">PWM frequency</b>
+            <p style="font-family:var(--mono);color:var(--amber);font-size:18px;margin:8px 0 0;">f<sub>pwm</sub> = f<sub>clk</sub> / [(PSC+1)(ARR+1)]</p>
+          </div>
+          <div class="card cheat-highlight">
+            <b style="color:#fff;">Duty cycle</b>
+            <p style="font-family:var(--mono);color:var(--teal);font-size:18px;margin:8px 0 0;">δ = CCR / (ARR+1) × 100%</p>
+          </div>
+        </div>
+        <div class="callout">
+          <span class="callout__label">The one-sentence version</span>
+          Input Capture writes <code>CNT → CCR</code> when the pin moves; Output Compare writes <code>CCR → pin</code> when <code>CNT</code> catches up — and PWM is just Output Compare repeated forever with a duty cycle you keep changing.
+        </div>
+      </section>
+
+      <section class="section wide" id="quiz">
+        <div class="eyebrow">Check yourself</div>
+        <h2>Quick check</h2>
+        <p class="lede">Eight questions covering everything above. No pressure — this is just to surface anything worth re-reading.</p>
+        <div id="quizRoot"></div>
+        <div class="quiz-score" id="quizScore"></div>
+      </section>
+
+      <footer class="foot">
+        Built from ENGE X200 Lecture 5 — Capture/Compare (Adelaide University). Reference manual RM0490 · User manual um2593 · Datasheet DS_stm32C031C6.
+      </footer>
+
+    </div>
+  </main>
+</div>
+<script>
+(function(){
+"use strict";
+
+/* ============================================================
+   NAV: mobile toggle + scrollspy
+   ============================================================ */
+var navToggle = document.getElementById('navToggle');
+var sidebar = document.getElementById('sidebar');
+if(navToggle){ navToggle.addEventListener('click', function(){ sidebar.classList.toggle('open'); }); }
+document.querySelectorAll('.navlink').forEach(function(a){
+  a.addEventListener('click', function(){ sidebar.classList.remove('open'); });
+});
+
+var sections = Array.from(document.querySelectorAll('.section[id]'));
+var navlinks = Array.from(document.querySelectorAll('.navlink'));
+function linkFor(id){ return navlinks.find(function(a){ return a.getAttribute('href') === '#' + id; }); }
+if('IntersectionObserver' in window){
+  var io = new IntersectionObserver(function(entries){
+    entries.forEach(function(entry){
+      var link = linkFor(entry.target.id);
+      if(!link) return;
+      if(entry.isIntersecting){
+        navlinks.forEach(function(l){ l.classList.remove('active'); });
+        link.classList.add('active');
+      }
+    });
+  }, { rootMargin: '-15% 0px -70% 0px', threshold: 0 });
+  sections.forEach(function(s){ io.observe(s); });
+}
+
+/* ============================================================
+   CODE PANEL TABS
+   ============================================================ */
+document.querySelectorAll('.codepanel').forEach(function(panelGroup){
+  var tabs = panelGroup.querySelectorAll('.codepanel__tab');
+  var panels = panelGroup.querySelectorAll('.codepanel__panel');
+  tabs.forEach(function(tab){
+    tab.addEventListener('click', function(){
+      tabs.forEach(function(t){ t.classList.remove('active'); });
+      panels.forEach(function(p){ p.classList.remove('active'); });
+      tab.classList.add('active');
+      var target = panelGroup.querySelector('.codepanel__panel[data-panel="' + tab.dataset.tab + '"]');
+      if(target) target.classList.add('active');
+    });
+  });
+});
+
+/* ============================================================
+   WIDGET 1 — INPUT CAPTURE DEMO
+   ============================================================ */
+(function(){
+  var cntEl = document.getElementById('capCnt');
+  var ccrEl = document.getElementById('capCcr');
+  var progEl = document.getElementById('capProgress');
+  var btn = document.getElementById('capBtn');
+  var msg = document.getElementById('capMsg');
+  if(!cntEl) return;
+  var ARR = 999;
+  var cnt = 0;
+  setInterval(function(){
+    cnt = (cnt + 7) % (ARR + 1);
+    cntEl.textContent = cnt;
+    progEl.style.width = (cnt / ARR * 100) + '%';
+  }, 40);
+  btn.addEventListener('click', function(){
+    ccrEl.textContent = cnt;
+    ccrEl.style.color = 'var(--green)';
+    msg.textContent = '⚡ Edge detected — CNT (' + cnt + ') copied into CCR, instantly, in hardware.';
+    setTimeout(function(){ ccrEl.style.color = 'var(--amber)'; }, 700);
+  });
+})();
+
+/* ============================================================
+   WIDGET 2 — LIVE PWM WAVEFORM
+   ============================================================ */
+(function(){
+  var canvas = document.getElementById('pwmCanvas');
+  if(!canvas) return;
+  var ctx = canvas.getContext('2d');
+  var freqSlider = document.getElementById('pwmFreq');
+  var dutySlider = document.getElementById('pwmDuty');
+  var resSelect = document.getElementById('pwmRes');
+  var freqLbl = document.getElementById('pwmFreqLbl');
+  var dutyLbl = document.getElementById('pwmDutyLbl');
+  var statT = document.getElementById('pwmStatT');
+  var statTh = document.getElementById('pwmStatTh');
+  var statMax = document.getElementById('pwmStatMax');
+  var statCcr = document.getElementById('pwmStatCcr');
+  var statAvg = document.getElementById('pwmStatAvg');
+
+  function fmtTime(ms){
+    if(ms < 1) return (ms*1000).toFixed(1) + ' \u00b5s';
+    return ms.toFixed(3) + ' ms';
+  }
+
+  function draw(){
+    var freq = +freqSlider.value;
+    var duty = +dutySlider.value;
+    var res = +resSelect.value;
+    freqLbl.textContent = freq;
+    dutyLbl.textContent = duty;
+
+    var Tms = 1000 / freq;
+    var thMs = Tms * duty / 100;
+    var maxCounter = Math.pow(2, res) - 1;
+    var ccr = Math.round(duty / 100 * maxCounter);
+
+    statT.textContent = fmtTime(Tms);
+    statTh.textContent = fmtTime(thMs);
+    statMax.textContent = maxCounter.toLocaleString();
+    statCcr.textContent = ccr.toLocaleString();
+    statAvg.textContent = (duty/100*5).toFixed(2) + ' V';
+
+    var W = canvas.width, H = canvas.height;
+    ctx.clearRect(0,0,W,H);
+
+    var periods = 4;
+    var periodPx = W / periods;
+    var highPx = periodPx * duty/100;
+    var yHigh = 34, yLow = 108;
+
+    // grid / axis label
+    ctx.font = '11px monospace';
+    ctx.fillStyle = '#5D6B80';
+    ctx.fillText('Voltage (pin state)', 10, 16);
+
+    // square wave
+    ctx.beginPath();
+    ctx.moveTo(0, yLow);
+    var x = 0;
+    for(var p=0;p<periods;p++){
+      ctx.lineTo(x, yHigh);
+      ctx.lineTo(x+highPx, yHigh);
+      ctx.lineTo(x+highPx, yLow);
+      ctx.lineTo(x+periodPx, yLow);
+      x += periodPx;
+    }
+    ctx.strokeStyle = '#FFB300';
+    ctx.lineWidth = 2.5;
+    ctx.stroke();
+
+    // average voltage dashed line
+    var yAvg = yLow - (yLow-yHigh) * duty/100;
+    ctx.setLineDash([5,4]);
+    ctx.strokeStyle = '#4FD8CE';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.moveTo(0,yAvg); ctx.lineTo(W,yAvg); ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.fillStyle = '#4FD8CE';
+    ctx.fillText('avg \u2248 ' + (duty/100*5).toFixed(1) + ' V', W-110, yAvg-6);
+
+    // sawtooth counter (CNT)
+    var yBase = 214, yTop = 140;
+    ctx.fillStyle = '#5D6B80';
+    ctx.fillText('Counter CNT (resets each period)', 10, 132);
+    ctx.beginPath();
+    x = 0;
+    for(p=0;p<periods;p++){
+      ctx.moveTo(x, yBase);
+      ctx.lineTo(x+periodPx-2, yTop);
+      x += periodPx;
+    }
+    ctx.strokeStyle = '#82AAFF';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+
+    // CCR level line on sawtooth
+    var yCcr = yBase - (yBase-yTop) * duty/100;
+    ctx.setLineDash([3,3]);
+    ctx.strokeStyle = '#FFB300';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.moveTo(0,yCcr); ctx.lineTo(W,yCcr); ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.fillStyle = '#FFB300';
+    ctx.fillText('CCR level', 10, yCcr-6);
+  }
+
+  [freqSlider, dutySlider, resSelect].forEach(function(el){
+    el.addEventListener('input', draw);
+    el.addEventListener('change', draw);
+  });
+  draw();
+})();
+
+/* ============================================================
+   WIDGET 3 — PSC / ARR / CCR CALCULATOR
+   ============================================================ */
+(function(){
+  var fclkEl = document.getElementById('calcFclk');
+  var fpwmEl = document.getElementById('calcFpwm');
+  var dutyEl = document.getElementById('calcDuty');
+  var exampleBtn = document.getElementById('calcExampleBtn');
+  if(!fclkEl) return;
+  var oPsc = document.getElementById('statPsc');
+  var oArr = document.getElementById('statArr');
+  var oCcr = document.getElementById('statCcr');
+  var oFpwm = document.getElementById('statFpwmActual');
+  var oDuty = document.getElementById('statDutyActual');
+
+  function recalc(){
+    var fclkMHz = Math.max(1, +fclkEl.value || 1);
+    var fpwm = Math.max(1, +fpwmEl.value || 1);
+    var duty = Math.min(100, Math.max(0, +dutyEl.value || 0));
+
+    var psc = Math.round(fclkMHz) - 1;
+    var ftim = (fclkMHz * 1e6) / (psc + 1);
+    var arr = Math.max(0, Math.round(ftim / fpwm) - 1);
+    var ccr = Math.round(duty/100 * (arr+1));
+
+    var actualFpwm = ftim / (arr+1);
+    var actualDuty = ccr / (arr+1) * 100;
+
+    oPsc.textContent = psc;
+    oArr.textContent = arr;
+    oCcr.textContent = ccr;
+    oFpwm.textContent = actualFpwm.toFixed(1) + ' Hz';
+    oDuty.textContent = actualDuty.toFixed(2) + ' %';
+  }
+  [fclkEl, fpwmEl, dutyEl].forEach(function(el){ el.addEventListener('input', recalc); });
+  exampleBtn.addEventListener('click', function(){
+    fclkEl.value = 48; fpwmEl.value = 1000; dutyEl.value = 25; recalc();
+  });
+  recalc();
+})();
+
+/* ============================================================
+   WIDGET 4 — OCxM MODE EXPLORER
+   ============================================================ */
+(function(){
+  var btnWrap = document.getElementById('ocmButtons');
+  if(!btnWrap) return;
+  var descEl = document.getElementById('ocmDesc');
+  var timelineEl = document.getElementById('ocmTimeline');
+
+  var modes = [
+    { bits:'0000', name:'Frozen', desc:'Comparison between CNT and CCR has no effect on the output pin at all — it just stays whatever it already was.',
+      pattern: Array(16).fill('lo') },
+    { bits:'0001', name:'Active on match', desc:'The instant CNT == CCR, the pin is set HIGH and stays high until something else changes it.',
+      pattern: Array(8).fill('lo').concat(Array(8).fill('hi')) },
+    { bits:'0010', name:'Inactive on match', desc:'The instant CNT == CCR, the pin is set LOW and stays low until something else changes it.',
+      pattern: Array(8).fill('hi').concat(Array(8).fill('lo')) },
+    { bits:'0011', name:'Toggle on match', desc:'Every time CNT == CCR, the pin flips to the opposite state. Shown here: low, then flips high at the match — next period it would flip low again.',
+      pattern: Array(8).fill('lo').concat(Array(8).fill('hi')) },
+    { bits:'0100', name:'Force inactive', desc:'Immediately forces the pin LOW, completely ignoring CNT and CCR. Useful for manual / software-driven control of the pin.',
+      pattern: Array(16).fill('lo') },
+    { bits:'0101', name:'Force active', desc:'Immediately forces the pin HIGH, completely ignoring CNT and CCR.',
+      pattern: Array(16).fill('hi') },
+    { bits:'0110', name:'PWM Mode 1', desc:'Pin is HIGH while CNT < CCR, and LOW once CNT \u2265 CCR. This is the standard PWM mode used throughout this course.',
+      pattern: Array(8).fill('hi').concat(Array(8).fill('lo')) },
+    { bits:'0111', name:'PWM Mode 2', desc:'The exact opposite of PWM Mode 1 \u2014 pin is LOW while CNT < CCR, and HIGH once CNT \u2265 CCR.',
+      pattern: Array(8).fill('lo').concat(Array(8).fill('hi')) }
+  ];
+
+  modes.forEach(function(m, i){
+    var b = document.createElement('button');
+    b.className = 'modebtn' + (i===6 ? ' active' : '');
+    b.textContent = m.name + ' \u00b7 ' + m.bits;
+    b.dataset.idx = i;
+    b.addEventListener('click', function(){
+      btnWrap.querySelectorAll('.modebtn').forEach(function(x){ x.classList.remove('active'); });
+      b.classList.add('active');
+      render(m);
+    });
+    btnWrap.appendChild(b);
+  });
+
+  function render(m){
+    descEl.innerHTML = '<b style="color:#fff;">' + m.name + '</b> (OCxM = <code>' + m.bits + '</code>) \u2014 ' + m.desc;
+    timelineEl.innerHTML = '';
+    m.pattern.forEach(function(state, i){
+      var t = document.createElement('div');
+      t.className = 'tick ' + state + (i===8 ? ' current' : '');
+      timelineEl.appendChild(t);
+    });
+  }
+  render(modes[6]);
+})();
+
+/* ============================================================
+   WIDGET 5 — SERVO ANGLE SIMULATOR
+   ============================================================ */
+(function(){
+  var slider = document.getElementById('servoAngle');
+  if(!slider) return;
+  var lbl = document.getElementById('servoAngleLbl');
+  var needle = document.getElementById('servoNeedle');
+  var pulseEl = document.getElementById('servoPulse');
+  var dutyEl = document.getElementById('servoDuty');
+  var ccrEl = document.getElementById('servoCcr');
+  var canvas = document.getElementById('servoWaveCanvas');
+  var ctx = canvas.getContext('2d');
+
+  function update(){
+    var angle = +slider.value;
+    lbl.textContent = angle;
+    var pulseUs = 500 + (2000/180) * angle;
+    var dutyPct = pulseUs / 20000 * 100;
+    pulseEl.textContent = pulseUs.toFixed(0) + ' \u00b5s';
+    dutyEl.textContent = dutyPct.toFixed(2) + ' %';
+    ccrEl.textContent = Math.round(pulseUs);
+
+    var mathAngle = (180 - angle) * Math.PI / 180;
+    var cx = 110, cy = 120, r = 90;
+    var x2 = cx + r * Math.cos(mathAngle);
+    var y2 = cy - r * Math.sin(mathAngle);
+    needle.setAttribute('x2', x2.toFixed(1));
+    needle.setAttribute('y2', y2.toFixed(1));
+
+    // waveform: single 20ms period bar
+    var W = canvas.width, H = canvas.height;
+    ctx.clearRect(0,0,W,H);
+    var highPx = W * dutyPct/100;
+    ctx.fillStyle = 'rgba(255,179,0,.18)';
+    ctx.fillRect(0, 20, highPx, 40);
+    ctx.strokeStyle = '#FFB300'; ctx.lineWidth = 2.5;
+    ctx.beginPath();
+    ctx.moveTo(0,60); ctx.lineTo(0,20); ctx.lineTo(highPx,20); ctx.lineTo(highPx,60); ctx.lineTo(W,60);
+    ctx.stroke();
+    ctx.font = '11px monospace'; ctx.fillStyle = '#5D6B80';
+    ctx.fillText('0 ms', 2, 78);
+    ctx.fillText('20 ms (period)', W-90, 78);
+    ctx.fillStyle = '#FFB300';
+    ctx.fillText(pulseUs.toFixed(0) + ' \u00b5s pulse', Math.max(4, highPx-55), 14);
+  }
+  slider.addEventListener('input', update);
+  update();
+})();
+
+/* ============================================================
+   WIDGET 6 — DEBOUNCE SHIFT REGISTER DEMO
+   ============================================================ */
+(function(){
+  var regEl = document.getElementById('debounceReg');
+  if(!regEl) return;
+  var hexEl = document.getElementById('debounceHex');
+  var countEl = document.getElementById('debounceCount');
+  var angleEl = document.getElementById('debounceAngle');
+  var msgEl = document.getElementById('debounceMsg');
+  var sampleBtn = document.getElementById('debounceSampleBtn');
+  var releaseBtn = document.getElementById('debounceReleaseBtn');
+  var resetBtn = document.getElementById('debounceResetBtn');
+
+  var history = 0xFF, samples = 0, angle = 0, direction = 1;
+
+  function render(){
+    regEl.innerHTML = '';
+    for(var i=7;i>=0;i--){
+      var bit = (history >> i) & 1;
+      var box = document.createElement('div');
+      box.className = 'bitbox ' + (bit ? 'hi' : 'lo');
+      box.textContent = bit;
+      regEl.appendChild(box);
+    }
+    hexEl.textContent = '0x' + history.toString(16).toUpperCase().padStart(2,'0');
+    countEl.textContent = samples;
+    angleEl.textContent = angle + '\u00b0';
+  }
+
+  function sample(pinHigh){
+    history = (history << 1) & 0xFF;
+    if(pinHigh) history |= 1;
+    samples++;
+    if(history === 0x80){
+      angle += 45 * direction;
+      if(angle >= 180){ angle = 180; direction = -1; }
+      if(angle <= 0){ angle = 0; direction = 1; }
+      msgEl.textContent = '\u2705 Clean press detected (register = 0x80) \u2014 servo steps 45\u00b0.';
+    } else {
+      msgEl.textContent = 'Sampling\u2026 register = 0x' + history.toString(16).toUpperCase().padStart(2,'0') + ' (waiting for a clean 0x80 pattern)';
+    }
+    render();
+  }
+
+  sampleBtn.addEventListener('click', function(){ sample(false); });
+  releaseBtn.addEventListener('click', function(){ sample(true); });
+  resetBtn.addEventListener('click', function(){
+    history = 0xFF; samples = 0; angle = 0; direction = 1;
+    msgEl.textContent = '';
+    render();
+  });
+  render();
+})();
+
+/* ============================================================
+   QUIZ
+   ============================================================ */
+(function(){
+  var root = document.getElementById('quizRoot');
+  if(!root) return;
+  var scoreEl = document.getElementById('quizScore');
+
+  var quiz = [
+    { q:'What value does Input Capture actually record when a pin transitions?',
+      opts:['The current value of the timer\u2019s CNT register', 'The raw sensor voltage on the pin', 'The value stored in ARR', 'The system clock frequency'],
+      correct:0,
+      exp:'Capture never reads a sensor value directly \u2014 it snapshots CNT, the timer\u2019s own free-running count, at the instant the pin transitions.' },
+    { q:'In PWM Mode 1 (OCxM = 0110), when is the output pin HIGH?',
+      opts:['When CNT > CCR', 'When CNT < CCR', 'Only exactly when CNT == ARR', 'It is always high in this mode'],
+      correct:1,
+      exp:'PWM Mode 1: high while CNT < CCR, low once CNT \u2265 CCR. PWM Mode 2 is the exact opposite.' },
+    { q:'Which register actually connects a CapCom channel to the physical GPIO pin?',
+      opts:['CCMR', 'MODER', 'CCER', 'AFR'],
+      correct:2,
+      exp:'CCMR configures the channel\u2019s mode/behaviour, but it\u2019s CCER\u2019s CCxE bit that switches the connection to the pin on.' },
+    { q:'What is the duty-cycle formula in terms of timer registers?',
+      opts:['\u03b4 = ARR / CCR \u00d7 100%', '\u03b4 = PSC / ARR \u00d7 100%', '\u03b4 = CCR / (ARR+1) \u00d7 100%', '\u03b4 = CCR \u00d7 ARR \u00d7 100%'],
+      correct:2,
+      exp:'\u03b4 = t\u2095/T \u00d7 100% = CCR / (ARR+1) \u00d7 100%. CCR is the fraction of the period you want high, in ticks instead of seconds.' },
+    { q:'What does the Update Generation (UG) bit in EGR actually do?',
+      opts:['Starts the timer counting', 'Manually forces preload values into the active registers immediately, before the timer starts', 'Clears every interrupt flag in SR', 'Switches a channel from input to output mode'],
+      correct:1,
+      exp:'Without UG, the very first period can run with undefined prescaler/period values, causing a glitch on power-up.' },
+    { q:'Which flag warns you that a second capture edge arrived before you\u2019d read the previous one?',
+      opts:['CCxIF', 'UIF', 'ARPE', 'CCxOF \u2014 the overcapture flag'],
+      correct:3,
+      exp:'CCxOF sets specifically when a new edge arrives in input-capture mode while the previous CCxIF hasn\u2019t been cleared yet \u2014 a value may have been overwritten unread.' },
+    { q:'On the STM32C031C6, which GPIOx_MODER bit pattern puts a pin into Alternate Function mode?',
+      opts:['00', '01', '10', '11'],
+      correct:2,
+      exp:'00 = input, 01 = general purpose output, 10 = alternate function (what CapCom needs), 11 = analog.' },
+    { q:'A hobby servo expects one pulse every 20 ms. What PWM frequency is that?',
+      opts:['20 Hz', '500 Hz', '1 kHz', '50 Hz'],
+      correct:3,
+      exp:'f = 1/T = 1/0.020 s = 50 Hz.' }
+  ];
+
+  var answered = 0, correctCount = 0;
+  function updateScore(){
+    scoreEl.textContent = answered === 0 ? '' : ('Score: ' + correctCount + ' / ' + answered + ' answered (' + quiz.length + ' total)');
+  }
+
+  quiz.forEach(function(item, qi){
+    var qDiv = document.createElement('div');
+    qDiv.className = 'quiz-q';
+    var num = document.createElement('div');
+    num.className = 'qnum';
+    num.textContent = 'QUESTION ' + (qi+1) + ' / ' + quiz.length;
+    var qtext = document.createElement('div');
+    qtext.className = 'qtext';
+    qtext.textContent = item.q;
+    qDiv.appendChild(num);
+    qDiv.appendChild(qtext);
+
+    var expDiv = document.createElement('div');
+    expDiv.className = 'quiz-exp';
+    expDiv.textContent = item.exp;
+
+    item.opts.forEach(function(optText, oi){
+      var opt = document.createElement('button');
+      opt.className = 'quiz-opt';
+      opt.textContent = optText;
+      opt.addEventListener('click', function(){
+        var buttons = qDiv.querySelectorAll('.quiz-opt');
+        buttons.forEach(function(b){ b.disabled = true; });
+        if(oi === item.correct){
+          opt.classList.add('correct');
+          correctCount++;
+        } else {
+          opt.classList.add('wrong');
+          buttons[item.correct].classList.add('correct');
+        }
+        answered++;
+        expDiv.style.display = 'block';
+        updateScore();
+      });
+      qDiv.appendChild(opt);
+    });
+    qDiv.appendChild(expDiv);
+    root.appendChild(qDiv);
+  });
+  updateScore();
+})();
+
+})();
+</script>
+</body>
+</html>
