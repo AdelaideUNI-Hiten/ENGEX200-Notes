@@ -19,5 +19,19 @@
     "file": "notes/Timers.html",
     "lecture": 4,
     "blurb": "Hardware timers from first principles: PSC/ARR maths, interrupt-driven blinking, button debouncing, and a full register quick-reference."
+  },
+  {
+    "id": "capcom",
+    "title": "Capture/Compare & PWM",
+    "file": "notes/CapCom.html",
+    "lecture": 5,
+    "blurb": "How a timer's Capture/Compare module measures real-world timing and generates precisely-timed signals — the basis for PWM, motor control, and LEDs."
+  },
+  {
+    "id": "serialcom",
+    "title": "Serial Communication (UART)",
+    "file": "notes/SerialCom.html",
+    "lecture": 6,
+    "blurb": "How two chips with no shared clock hold a reliable conversation over a single wire, one bit at a time — UART framing, baud rate, and every register bit explained."
   }
 ]
